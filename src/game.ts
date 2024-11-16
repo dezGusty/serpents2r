@@ -37,7 +37,7 @@ export class Game {
   public obstacles: Obstacle[] = [];
 
   constructor(
-    private gameMap: GameMap,
+    public gameMap: GameMap,
     private keyboardController: KeyboardController,
     private gamepadController: GamepadController
   ) {
