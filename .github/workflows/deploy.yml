@@ -16,7 +16,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '20'
+          node-version: "20"
 
       - name: Install dependencies
         run: npm install
@@ -24,7 +24,10 @@ jobs:
       - name: Build project
         run: npm run build
 
-      - name: Move build to docs
+      - name: Delete old docs if existing
+        run: rm -rf docs
+
+      - name: Rename the dist folder to docs
         run: mv dist docs
 
       - name: Deploy to GitHub Pages
