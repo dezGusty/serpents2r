@@ -1,0 +1,64 @@
+{
+  "frames": {
+      "critter1_up":
+      {
+          "frame": {"x":0,"y":0,"w":20,"h":20}
+      },
+      "critter1_left":
+      {
+          "frame": {"x":20,"y":0,"w":20,"h":20}
+      },
+      "critter1_down":
+      {
+          "frame": {"x":40,"y":0,"w":20,"h":20}
+      },
+      "critter1_right":
+      {
+          "frame": {"x":60,"y":0,"w":20,"h":20}
+      },
+      "critter2_up":
+      {
+          "frame": {"x":20,"y":0,"w":20,"h":20}
+      },
+      "critter2_left":
+      {
+          "frame": {"x":20,"y":20,"w":20,"h":20}
+      },
+      "critter2_down":
+      {
+          "frame": {"x":20,"y":20,"w":20,"h":20}
+      },
+      "critter2_right":
+      {
+          "frame": {"x":20,"y":20,"w":20,"h":20}
+      },
+      "critter3_up":
+      {
+          "frame": {"x":0,"y":20,"w":20,"h":20}
+      },
+      "critter3_left":
+      {
+          "frame": {"x":0,"y":20,"w":20,"h":20}
+      },
+      "critter3_down":
+      {
+          "frame": {"x":0,"y":20,"w":20,"h":20}
+      },
+      "critter3_right":
+      {
+          "frame": {"x":0,"y":20,"w":20,"h":20}
+      }
+
+  },
+
+  "animations": {
+      
+  },
+
+  "meta": {
+      "image": "crittersspritesheet.png",
+      "format": "RGBA8888",
+      "size": {"w":40,"h":40},
+      "scale": "0.625"
+  }
+}
