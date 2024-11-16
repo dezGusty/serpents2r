@@ -1,0 +1,37 @@
+{
+  "frames": {
+      "terrain1.png":
+      {
+          "frame": {"x":0,"y":0,"w":20,"h":20}
+      },
+      "terrain2.png":
+      {
+          "frame": {"x":20,"y":0,"w":20,"h":20}
+      },
+      "terrain3.png":
+      {
+          "frame": {"x":40,"y":0,"w":20,"h":20}
+      },
+      "terrain4.png":
+      {
+          "frame": {"x":0,"y":20,"w":20,"h":20}
+      },
+      "terrain5.png":
+      {
+          "frame": {"x":20,"y":20,"w":20,"h":20}
+      }
+  },
+
+  "animations": {
+      "terrain": [
+        "terrain1.png", "terrain2.png"
+      ]
+  },
+
+  "meta": {
+      "image": "terrainspritesheet.png",
+      "format": "RGBA8888",
+      "size": {"w":60,"h":40},
+      "scale": "0.625"
+  }
+}

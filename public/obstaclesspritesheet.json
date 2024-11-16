@@ -1,0 +1,33 @@
+{
+  "frames": {
+      "obstacle1.png":
+      {
+          "frame": {"x":0,"y":0,"w":20,"h":20}
+      },
+      "obstacle2.png":
+      {
+          "frame": {"x":20,"y":0,"w":20,"h":20}
+      },
+      "obstacle3.png":
+      {
+          "frame": {"x":0,"y":20,"w":20,"h":20}
+      },
+      "obstacle4.png":
+      {
+          "frame": {"x":20,"y":20,"w":20,"h":20}
+      }
+  },
+
+  "animations": {
+      "bonus": [
+        "bonus1.png"
+      ]
+  },
+
+  "meta": {
+      "image": "obstaclesspritesheet.png",
+      "format": "RGBA8888",
+      "size": {"w":40,"h":40},
+      "scale": "0.625"
+  }
+}
