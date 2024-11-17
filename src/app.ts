@@ -1,4 +1,4 @@
-import { Application, Sprite, Assets, Text, TextStyle, BitmapText, Spritesheet, AnimatedSprite } from 'pixi.js';
+import { Application, Sprite, Assets, Text, TextStyle, BitmapText, Spritesheet, AnimatedSprite, Texture } from 'pixi.js';
 import { GameMap } from './gamemap';
 import { KeyboardController, KeyboardControllerMode } from './keyboard-controller';
 import { Snake } from './snake';
@@ -40,6 +40,10 @@ export class SerpentsApp {
   private crittersSprites: Sprite[] = [];
   private obstaclesSprites: Sprite[] = [];
 
+  private touchTexture?: Texture = undefined;
+  private touchSprite: Sprite = new Sprite();
+  private displayOnScreenTouchControls: boolean = false;
+
   private fpsText: Maybe<BitmapText> = Maybe.None();
   private gameSpeedText?: BitmapText;
   private gameOverText?: BitmapText;
@@ -58,7 +62,7 @@ export class SerpentsApp {
     this.keyboardController = new KeyboardController(KeyboardControllerMode.Manual);
     this.gamepadController = new GamepadController();
 
-    let gameMap: GameMap = new GameMap(28, 12);
+    let gameMap: GameMap = new GameMap(25, 10);
     this.game = new Game(gameMap, this.keyboardController, this.gamepadController);
   }
 
@@ -123,6 +127,11 @@ export class SerpentsApp {
     for (let key in this.obstaclesSheet.value().textures) {
       this.obstaclesTextureNames.push(key);
     }
+
+    this.touchTexture = await Assets.load('touch/touch_area.png');
+    this.touchSprite = new Sprite(this.touchTexture);
+    this.touchSprite.x = 30;
+    this.touchSprite.y = 150;
   }
 
   public async initializeTexts() {
@@ -261,7 +270,6 @@ export class SerpentsApp {
 
   public setupInputHandlers(): void {
 
-
     window.addEventListener("gamepadconnected", (e) => {
       let message: string = `Gamepad connected at index ${e.gamepad.index}: ${e.gamepad.id}. ${e.gamepad.buttons.length} buttons, ${e.gamepad.axes.length} axes.`;
       console.log(message);
@@ -299,6 +307,58 @@ export class SerpentsApp {
         this.keyboardController.keyupHandler(event);
       }
     });
+
+    globalThis.addEventListener("touchstart", (event) => {
+      if (!this.displayOnScreenTouchControls) {
+        console.log('Adding on-screen touch controls');
+        this.displayOnScreenTouchControls = true;
+        this.app.stage.addChild(this.touchSprite);
+        return;
+      }
+
+      if (this.currentGameState === GameState.InMenu) {
+        this.startGame();
+      }
+
+      if (this.currentGameState === GameState.InGame) {
+        // handled inside the Game class
+        // this.keyboardController.keyupHandler(event);
+        if (event.touches.length > 0) {
+          console.log(`Touch start: ${event.touches.item(0)?.clientX}, ${event.touches.item(0)?.clientY}`);
+          const touchX = event.touches.item(0)?.clientX;
+          const touchY = event.touches.item(0)?.clientY;
+          const squareRadius = 29;
+
+          if (touchX && touchY) {
+            // set the direction based on the touch position, if around the following positions:
+            // 109, 171 => up
+            if ((109 - squareRadius < touchX) && (touchX < 109 + squareRadius)
+              && (171 - squareRadius < touchY) && (touchY < 171 + squareRadius)) {
+              this.game.onKeyDown('up');
+            } else if (109 - squareRadius < touchX && touchX < 109 + squareRadius
+              && 292 - squareRadius < touchY && touchY < 292 + squareRadius) {
+              // 109, 292 => down
+              this.game.onKeyDown('down');
+            } else if (50 - squareRadius < touchX && touchX < 50 + squareRadius
+              && 232 - squareRadius < touchY && touchY < 232 + squareRadius) {
+              // 50, 232 => left 
+              this.game.onKeyDown('left');
+            } else if (169 - squareRadius < touchX && touchX < 169 + squareRadius
+              && 232 - squareRadius < touchY && touchY < 232 + squareRadius) {
+              // 169, 232 => right
+              this.game.onKeyDown('right');
+            }
+          }
+
+        }
+      }
+
+      else if (this.currentGameState === GameState.PostGameGameOver) {
+        // Any key => move to the menu
+        this.cleanupGame();
+        this.currentGameState = GameState.InMenu;
+      }
+    }, false);
   }
 
 
