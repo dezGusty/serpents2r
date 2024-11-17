@@ -1,4 +1,4 @@
-import { Application, Sprite, Assets, Text, TextStyle, BitmapText, Spritesheet, AnimatedSprite, Texture } from 'pixi.js';
+import { Application, Sprite, Assets, Text, TextStyle, BitmapText, Spritesheet, AnimatedSprite, Texture, Container } from 'pixi.js';
 import { GameMap } from './gamemap';
 import { KeyboardController, KeyboardControllerMode } from './keyboard-controller';
 import { Snake } from './snake';
@@ -53,6 +53,11 @@ export class SerpentsApp {
   private keyboardController: KeyboardController;
   private gamepadController: GamepadController;
 
+  // Add render groups for layering
+  private terrainRenderGroup: Container = new Container({isRenderGroup: true});
+  private mainRenderGroup: Container = new Container({isRenderGroup: true});
+  private uiRenderGroup: Container = new Container({isRenderGroup: true});
+
   private game: Game;
 
   constructor(public app: Application) {
@@ -77,6 +82,10 @@ export class SerpentsApp {
     // The application will create a canvas element for you that you
     // can then insert into the DOM
     document.body.appendChild(this.app.canvas);
+
+    this.app.stage.addChild(this.terrainRenderGroup);
+    this.app.stage.addChild(this.mainRenderGroup);
+    this.app.stage.addChild(this.uiRenderGroup);
 
     await this.loadAssets();
     await this.loadSounds();
@@ -153,11 +162,11 @@ export class SerpentsApp {
 
     this.fpsText.value().x = 10;
     this.fpsText.value().y = 10;
-    this.app.stage.addChild(this.fpsText.value());
+    this.uiRenderGroup.addChild(this.fpsText.value());
 
     this.gameSpeedText.x = 10;
     this.gameSpeedText.y = 35;
-    this.app.stage.addChild(this.gameSpeedText);
+    this.uiRenderGroup.addChild(this.gameSpeedText);
 
     this.gameOverText.x = 100;
     this.gameOverText.y = 200;
@@ -168,7 +177,7 @@ export class SerpentsApp {
     });
     this.instructionsText.x = 280;
     this.instructionsText.y = 10;
-    this.app.stage.addChild(this.instructionsText);
+    this.uiRenderGroup.addChild(this.instructionsText);
 
     this.messagesText = new Text({
       text: '',
@@ -176,7 +185,7 @@ export class SerpentsApp {
     });
     this.messagesText.x = 10;
     this.messagesText.y = 60;
-    this.app.stage.addChild(this.messagesText);
+    this.uiRenderGroup.addChild(this.messagesText);
   }
 
   public async loadSounds() {
@@ -204,7 +213,7 @@ export class SerpentsApp {
         gameSprite.x = i * 32;
         gameSprite.y = j * 32;
 
-        this.app.stage.addChild(gameSprite);
+        this.terrainRenderGroup.addChild(gameSprite);
       }
     }
 
@@ -225,19 +234,6 @@ export class SerpentsApp {
   public setupMainLoop(): void {
     this.app.ticker.maxFPS = 60;
 
-    // if (GameState.InGame === currentGameState) {
-    //   startGame();
-    //   const snakeSprites = updateSnakeSprites(game.snake);
-    //   for (let i = 0; i < snakeSprites.length; i++) {
-    //     app.stage.addChild(snakeSprites[i]);
-    //   }
-    // } else 
-    // if (currentGameState === GameState.InMenu) {
-    //   messagesText.text = "Press ENTER to start the game.";
-    // } else if (currentGameState === GameState.PostGameGameOver) {
-    //   messagesText.text = "Game Over! Press ENTER to restart.";
-    // }
-
     // Listen for frame updates
     this.app.ticker.add((ticker) => {
 
@@ -256,7 +252,7 @@ export class SerpentsApp {
         if (!this.game.snake.alive) {
           this.currentGameState = GameState.PostGameGameOver;
           if (this.gameOverText) {
-            this.app.stage.addChild(this.gameOverText);
+            this.uiRenderGroup.addChild(this.gameOverText);
           }
           sound.play('game-over');
         }
@@ -312,7 +308,7 @@ export class SerpentsApp {
       if (!this.displayOnScreenTouchControls) {
         console.log('Adding on-screen touch controls');
         this.displayOnScreenTouchControls = true;
-        this.app.stage.addChild(this.touchSprite);
+        this.uiRenderGroup.addChild(this.touchSprite);
         return;
       }
 
@@ -373,26 +369,26 @@ export class SerpentsApp {
     // clean-up for the snake
     const sprites = this.game.snake.sprites();
     for (let i = 0; i < sprites.length; i++) {
-      this.app.stage.removeChild(sprites[i]);
+      this.mainRenderGroup.removeChild(sprites[i]);
     }
 
     // clean-up for the bonuses
     for (let i = 0; i < this.bonusSprites.length; i++) {
-      this.app.stage.removeChild(this.bonusSprites[i]);
+      this.mainRenderGroup.removeChild(this.bonusSprites[i]);
     }
 
     // clean-up for the obstacles
     for (let i = 0; i < this.obstaclesSprites.length; i++) {
-      this.app.stage.removeChild(this.obstaclesSprites[i]);
+      this.mainRenderGroup.removeChild(this.obstaclesSprites[i]);
     }
 
     // clean-up for the critters
     for (let i = 0; i < this.crittersSprites.length; i++) {
-      this.app.stage.removeChild(this.crittersSprites[i]);
+      this.mainRenderGroup.removeChild(this.crittersSprites[i]);
     }
 
     if (this.gameOverText) {
-      this.app.stage.removeChild(this.gameOverText);
+      this.mainRenderGroup.removeChild(this.gameOverText);
     }
   }
 
@@ -411,17 +407,17 @@ export class SerpentsApp {
   private updateSnakeInStage(snake: Snake) {
     const oldSprites = snake.sprites();
     for (let i = 0; i < oldSprites.length; i++) {
-      this.app.stage.removeChild(oldSprites[i]);
+      this.mainRenderGroup.removeChild(oldSprites[i]);
     }
     const snakeSprites = this.updateSnakeSprites(snake);
     for (let i = 0; i < snakeSprites.length; i++) {
-      this.app.stage.addChild(snakeSprites[i]);
+      this.mainRenderGroup.addChild(snakeSprites[i]);
     }
   }
 
   private updateBonusesInStage(bonuses: Bonus[]) {
     for (let i = 0; i < this.bonusSprites.length; i++) {
-      this.app.stage.removeChild(this.bonusSprites[i]);
+      this.mainRenderGroup.removeChild(this.bonusSprites[i]);
     }
 
     this.bonusSprites = [];
@@ -454,14 +450,14 @@ export class SerpentsApp {
     }
 
     for (let i = 0; i < this.bonusSprites.length; i++) {
-      this.app.stage.addChild(this.bonusSprites[i]);
+      this.mainRenderGroup.addChild(this.bonusSprites[i]);
     }
   }
 
   private updateObstaclesInStage(obstacles: Obstacle[]) {
 
     for (let i = 0; i < this.obstaclesSprites.length; i++) {
-      this.app.stage.removeChild(this.obstaclesSprites[i]);
+      this.mainRenderGroup.removeChild(this.obstaclesSprites[i]);
     }
 
     this.obstaclesSprites = [];
@@ -478,13 +474,13 @@ export class SerpentsApp {
     }
 
     for (let i = 0; i < this.obstaclesSprites.length; i++) {
-      this.app.stage.addChild(this.obstaclesSprites[i]);
+      this.mainRenderGroup.addChild(this.obstaclesSprites[i]);
     }
   }
 
   private updateCrittersInStage(critters: Critter[]) {
     for (let i = 0; i < this.crittersSprites.length; i++) {
-      this.app.stage.removeChild(this.crittersSprites[i]);
+      this.mainRenderGroup.removeChild(this.crittersSprites[i]);
     }
 
     this.crittersSprites = [];
@@ -520,7 +516,7 @@ export class SerpentsApp {
     }
 
     for (let i = 0; i < this.crittersSprites.length; i++) {
-      this.app.stage.addChild(this.crittersSprites[i]);
+      this.mainRenderGroup.addChild(this.crittersSprites[i]);
     }
   }
 };
