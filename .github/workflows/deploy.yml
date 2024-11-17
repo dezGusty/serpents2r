@@ -23,6 +23,9 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+      
+      - name : Copy .env.gh.local to .env
+        run: cp .env.gh.local .env
 
       - name: Build project
         run: npm run build
