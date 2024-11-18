@@ -49,6 +49,7 @@ The `.env` file is used as input in `vite.config.ts`.
 ```sh
 cp .env.firebase.local .env
 npm run build
+cp .env.gh.local .env
 npm run preview
 firebase deploy
 ```

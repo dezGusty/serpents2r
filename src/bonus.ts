@@ -9,10 +9,13 @@ export class Bonus {
   static readonly WARNING_DURATION = 3000;
   static readonly CHANCE_TO_TRANSFORM_TO_OBSTACLE = 0.2;
   public picked: boolean = false;
+  private startingLifetime: number = 0;
+  public initialDuration(): number { return this.startingLifetime; }
 
   constructor(x: number, y: number, lifetime: number, type: number) {
     this.x = x;
     this.y = y;
+    this.startingLifetime = lifetime;
     this.remainingLifetime = lifetime;
     this.type = type;
   }

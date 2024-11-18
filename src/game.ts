@@ -63,13 +63,10 @@ export class Game {
 
     // Reset the obstacles
     this.obstacles = [];
-    // Initialize obstacles
-    // this.obstacles.push(new Obstacle(4, 4, 0));
-    // this.obstacles.push(new Obstacle(4, 11, 1));
-    // this.obstacles.push(new Obstacle(22, 4, 2));
 
     // Reset the bonuses
     this.bonuses = [];
+    this.critters = [];
 
     // Initialize critters
     this.initializeCritters();
@@ -157,6 +154,13 @@ export class Game {
     console.log(`Snake picked up a critter of type ${critter.type}`);
   }
  
+  onBonusExpiredOrPicked(bonus: Bonus) {
+    console.log(`Bonus of type ${bonus.type} expired or was picked`);
+  }
+
+  onBonusSpawned(bonus: Bonus) {
+    console.log(`Bonus of type ${bonus.type} spawned`);
+  }
 
   /**
    * Try to cache the direction to be used in the next update.
@@ -276,7 +280,7 @@ export class Game {
       somethingChanged = true;
     }
 
-    // Spawn additional critters with a 15% chance per second if less than MAX_CRITTERS
+    // Spawn additional critters with a small chance per second if less than MAX_CRITTERS
     if (this.critters.length < this.MAX_CRITTERS
       && Math.random() < this.CRITTER_CHANCE_TO_SPAWN * (delta / 1000)) {
       const x = Math.floor(Math.random() * this.gameMap.width);
@@ -302,6 +306,7 @@ export class Game {
       if (this.snake.body[0].x === this.critters[i].x && this.snake.body[0].y === this.critters[i].y) {
         // TODO: check how to apply the critter effect to the snake
         this.snake.grow();
+        this.snake.score += 10;
         this.critters.splice(i, 1);
         somethingChanged = true;
         this.onSnakePickupCritter(this.critters[i]);
@@ -324,6 +329,11 @@ export class Game {
         somethingChanged = true;
       }
     }
+
+    // Remove expired bonuses, allow listeners to react.
+    this.bonuses.filter(bonus => bonus.remainingLifetime <= 0 || bonus.picked).forEach(bonus => {
+      this.onBonusExpiredOrPicked(bonus);
+    });
 
     // Keep only the bonuses that are still active
     this.bonuses = this.bonuses.filter(
@@ -350,7 +360,9 @@ export class Game {
 
       let emptySpot = this.gameMap.findEmptySpotInCollisionMap();
       const bonusType = Math.floor(Math.random() * this.bonusTypesCount);
-      this.bonuses.push(new Bonus(emptySpot.x, emptySpot.y, 10000, bonusType));
+      let newBonus = new Bonus(emptySpot.x, emptySpot.y, 10000, bonusType);
+      this.bonuses.push(newBonus);
+      this.onBonusSpawned(newBonus);
       somethingChanged = true;
     }
 

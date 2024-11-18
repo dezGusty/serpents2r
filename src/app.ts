@@ -18,9 +18,6 @@ export enum GameState {
 }
 
 export class SerpentsApp {
-  // The application will create a renderer using WebGL, if possible,
-  // with a fallback to a canvas render. It will also setup the ticker
-  // and the root stage PIXI.Container
 
   private currentGameState: GameState = GameState.InMenu;
 
@@ -36,16 +33,18 @@ export class SerpentsApp {
   private crittersSheet: Maybe<Spritesheet> = Maybe.None();
   private obstaclesSheet: Maybe<Spritesheet> = Maybe.None();
 
+  private mappedBonusTexNames: string[] = [];
   private bonusSprites: Sprite[] = [];
   private crittersSprites: Sprite[] = [];
   private obstaclesSprites: Sprite[] = [];
 
   private touchTexture?: Texture = undefined;
-  private touchSprite: Sprite = new Sprite();
+  private touchSpriteLeft: Sprite = new Sprite();
+  private touchSpriteRight: Sprite = new Sprite();
   private displayOnScreenTouchControls: boolean = false;
 
   private fpsText: Maybe<BitmapText> = Maybe.None();
-  private gameSpeedText?: BitmapText;
+  private gameScoreText?: BitmapText;
   private gameOverText?: BitmapText;
   private instructionsText?: Text;
   private messagesText?: Text;
@@ -54,14 +53,18 @@ export class SerpentsApp {
   private gamepadController: GamepadController;
 
   // Add render groups for layering
-  private terrainRenderGroup: Container = new Container({isRenderGroup: true});
-  private mainRenderGroup: Container = new Container({isRenderGroup: true});
-  private uiRenderGroup: Container = new Container({isRenderGroup: true});
+  private terrainRenderGroup: Container = new Container({ isRenderGroup: true });
+  private mainRenderGroup: Container = new Container({ isRenderGroup: true });
+  private uiRenderGroup: Container = new Container({ isRenderGroup: true });
+  private renderContainer: Container = new Container();
+
+  private renderContainerOffset: { x: number, y: number } = { x: 0, y: 0 };
 
   private game: Game;
 
+  private tempMessage = '';
+
   constructor(public app: Application) {
-    // this.app = new Application();
     this.currentGameState = GameState.InMenu;
 
     this.keyboardController = new KeyboardController(KeyboardControllerMode.Manual);
@@ -72,20 +75,31 @@ export class SerpentsApp {
   }
 
   public async initialize() {
-    const bodyElement: Maybe<HTMLElement> = new Maybe<HTMLElement>(document.querySelector('body'));
+    const containingElement: Maybe<HTMLElement> = new Maybe(document.querySelector('body'));
 
     // Wait for the Renderer to be available
-    await this.app.init({ background: '#102229', resizeTo: bodyElement.value() });
+    await this.app.init({
+      background: '#102229',
+      width: 800,
+      height: 320,
+      resizeTo: containingElement.value()
+    });
 
     console.log('App started, size: ' + this.app.screen.width + 'x' + this.app.screen.height);
+    this.tempMessage = 'App started, size: ' + this.app.screen.width + 'x' + this.app.screen.height;
+    this.setScalingForSize(this.app.screen.width, this.app.screen.height);
 
     // The application will create a canvas element for you that you
     // can then insert into the DOM
-    document.body.appendChild(this.app.canvas);
+    // document.body.appendChild(this.app.canvas);
+    containingElement.value().appendChild(this.app.canvas);
 
-    this.app.stage.addChild(this.terrainRenderGroup);
-    this.app.stage.addChild(this.mainRenderGroup);
-    this.app.stage.addChild(this.uiRenderGroup);
+    // Add the stage to the canvas
+    this.app.stage.addChild(this.renderContainer);
+
+    this.renderContainer.addChild(this.terrainRenderGroup);
+    this.renderContainer.addChild(this.mainRenderGroup);
+    this.renderContainer.addChild(this.uiRenderGroup);
 
     await this.loadAssets();
     await this.loadSounds();
@@ -95,6 +109,25 @@ export class SerpentsApp {
 
     this.setupMainLoop();
     this.setupInputHandlers();
+
+    // set-up a resize event listener
+    this.app.renderer.on('resize', (width, height) => {
+      this.setScalingForSize(width, height);
+    });
+  }
+
+  private setScalingForSize(width: number, height: number) {
+    if (this.instructionsText) {
+      this.instructionsText.text += "\nResized to: " + width + 'x' + height;
+      console.log('Resized to: ' + width + 'x' + height);
+    }
+    const herizontalScale = width / 800;
+    const verticalScale = height / 320;
+    // keep the aspect ratio
+    const minScale = Math.min(herizontalScale, verticalScale);
+    this.renderContainer.scale.set(minScale, minScale);
+    this.renderContainerOffset = { x: (width - 800 * minScale) / 2, y: (height - 320 * minScale) / 2 };
+    this.renderContainer.position.set(this.renderContainerOffset.x, this.renderContainerOffset.y);
   }
 
   public async loadAssets() {
@@ -138,9 +171,12 @@ export class SerpentsApp {
     }
 
     this.touchTexture = await Assets.load('touch/touch_area.png');
-    this.touchSprite = new Sprite(this.touchTexture);
-    this.touchSprite.x = 30;
-    this.touchSprite.y = 150;
+    this.touchSpriteLeft = new Sprite(this.touchTexture);
+    this.touchSpriteLeft.x = 30;
+    this.touchSpriteLeft.y = 150;
+    this.touchSpriteRight = new Sprite(this.touchTexture);
+    this.touchSpriteRight.x = 630;
+    this.touchSpriteRight.y = 150;
   }
 
   public async initializeTexts() {
@@ -150,8 +186,8 @@ export class SerpentsApp {
       text: 'FPS: 0', style: { fontFamily: 'GustysSerpents', fontSize: 18, align: 'left', },
     }));
 
-    this.gameSpeedText = new BitmapText({
-      text: 'Speed: 1', style: { fontFamily: 'GustysSerpents', fontSize: 18, align: 'left', },
+    this.gameScoreText = new BitmapText({
+      text: 'Pts.: 0', style: { fontFamily: 'GustysSerpents', fontSize: 18, align: 'left', },
     });
 
     const style = new TextStyle({ fontFamily: 'Arial', fontSize: 18, fill: { color: '#ffffff', alpha: 1 }, stroke: { color: '#4a1850', width: 5, join: 'round' }, });
@@ -164,18 +200,24 @@ export class SerpentsApp {
     this.fpsText.value().y = 10;
     this.uiRenderGroup.addChild(this.fpsText.value());
 
-    this.gameSpeedText.x = 10;
-    this.gameSpeedText.y = 35;
-    this.uiRenderGroup.addChild(this.gameSpeedText);
+    this.gameScoreText.x = 10;
+    this.gameScoreText.y = 35;
 
-    this.gameOverText.x = 100;
-    this.gameOverText.y = 200;
+    this.gameOverText.x = 200;
+    this.gameOverText.y = 100;
 
     this.instructionsText = new Text({
-      text: 'Press ENTER to start the game. Use the gamepad direction stick (or keyb. WASD) to move the snake',
+      text: `Press ENTER to start the game. 
+
+Snake movement:
+- gamepad direction stick
+- keyb. WASD or dir keys
+- touch screen to enable on-screen controls
+`
+        + "\n" + this.tempMessage,
       style,
     });
-    this.instructionsText.x = 280;
+    this.instructionsText.x = 240;
     this.instructionsText.y = 10;
     this.uiRenderGroup.addChild(this.instructionsText);
 
@@ -229,6 +271,12 @@ export class SerpentsApp {
     this.game.onSnakePickupCritter = () => {
       sound.play('eat-critter');
     };
+    this.game.onBonusExpiredOrPicked = (bonus: Bonus) => {
+      this.onBonusExpiredOrPicked(bonus);
+    }
+    this.game.onBonusSpawned = (bonus: Bonus) => {
+      this.onBonusSpawned(bonus);
+    };
   }
 
   public setupMainLoop(): void {
@@ -251,15 +299,15 @@ export class SerpentsApp {
 
         if (!this.game.snake.alive) {
           this.currentGameState = GameState.PostGameGameOver;
-          if (this.gameOverText) {
+          if (this.gameOverText != undefined) {
             this.uiRenderGroup.addChild(this.gameOverText);
           }
-          sound.play('game-over');
+          // sound.play('game-over');
         }
       }
 
-      if (this.gameSpeedText) {
-        this.gameSpeedText.text = `Speed: ${this.game.snake.speed().toFixed(1)}, Length: ${this.game.snake.body.length}`;
+      if (this.gameScoreText) {
+        this.gameScoreText.text = `Pts.: ${this.game.snake.score.toFixed(0)}`;
       }
     });
   }
@@ -286,6 +334,18 @@ export class SerpentsApp {
       if (this.currentGameState === GameState.InGame) {
         // handled inside the Game class
         this.keyboardController.keydownHandler(event);
+        if (event.code === 'KeyP') {
+          //debug information
+          this.bonusSprites.forEach((sprite, index) => {
+            console.log(`Bonus sprite tex ${index}: ${sprite.texture}`);
+          });
+          this.mappedBonusTexNames.forEach((textureName, index) => {
+            console.log(`Mapped bonus texture ${index}: ${textureName}`);
+          });
+          this.mainRenderGroup.children.forEach((container, index) => {
+            console.log(`Main RG container ${index}: ${container.name}, ${container.getBounds().x}, ${container.getBounds().y}`);
+          });
+        }
       } else if (this.currentGameState === GameState.InMenu) {
         if (event.code === 'Enter') {
           this.startGame();
@@ -293,6 +353,7 @@ export class SerpentsApp {
       } else if (this.currentGameState === GameState.PostGameGameOver) {
         // Any key => move to the menu
         this.cleanupGame();
+        this.showMenu();
         this.currentGameState = GameState.InMenu;
       }
     });
@@ -308,7 +369,8 @@ export class SerpentsApp {
       if (!this.displayOnScreenTouchControls) {
         console.log('Adding on-screen touch controls');
         this.displayOnScreenTouchControls = true;
-        this.uiRenderGroup.addChild(this.touchSprite);
+        this.uiRenderGroup.addChild(this.touchSpriteLeft);
+        this.uiRenderGroup.addChild(this.touchSpriteRight);
         return;
       }
 
@@ -323,29 +385,10 @@ export class SerpentsApp {
           console.log(`Touch start: ${event.touches.item(0)?.clientX}, ${event.touches.item(0)?.clientY}`);
           const touchX = event.touches.item(0)?.clientX;
           const touchY = event.touches.item(0)?.clientY;
-          const squareRadius = 29;
 
           if (touchX && touchY) {
-            // set the direction based on the touch position, if around the following positions:
-            // 109, 171 => up
-            if ((109 - squareRadius < touchX) && (touchX < 109 + squareRadius)
-              && (171 - squareRadius < touchY) && (touchY < 171 + squareRadius)) {
-              this.game.onKeyDown('up');
-            } else if (109 - squareRadius < touchX && touchX < 109 + squareRadius
-              && 292 - squareRadius < touchY && touchY < 292 + squareRadius) {
-              // 109, 292 => down
-              this.game.onKeyDown('down');
-            } else if (50 - squareRadius < touchX && touchX < 50 + squareRadius
-              && 232 - squareRadius < touchY && touchY < 232 + squareRadius) {
-              // 50, 232 => left 
-              this.game.onKeyDown('left');
-            } else if (169 - squareRadius < touchX && touchX < 169 + squareRadius
-              && 232 - squareRadius < touchY && touchY < 232 + squareRadius) {
-              // 169, 232 => right
-              this.game.onKeyDown('right');
-            }
+            this.reactToTouchInput(touchX, touchY);
           }
-
         }
       }
 
@@ -357,11 +400,49 @@ export class SerpentsApp {
     }, false);
   }
 
+  private reactToTouchInput(touchX: number, touchY: number) {
+    const squareRadius = 29;
+
+    // Also take scaling into account
+    touchX = touchX / this.renderContainer.scale.x;
+    touchY = touchY / this.renderContainer.scale.y;
+
+    // Store the touch zones for the directions and actions
+    const touchZoneActions: { x: number, y: number, action: string }[] = [
+      { x: 109, y: 171, action: 'up' },
+      { x: 109, y: 292, action: 'down' },
+      { x: 50, y: 232, action: 'left' },
+      { x: 169, y: 232, action: 'right' },
+      { x: 706, y: 171, action: 'up' },
+      { x: 706, y: 292, action: 'down' },
+      { x: 671, y: 232, action: 'left' },
+      { x: 746, y: 232, action: 'right' }
+    ];
+
+    touchZoneActions.forEach(element => {
+      if ((element.x - squareRadius + this.renderContainerOffset.x < touchX) && (touchX < element.x + squareRadius + this.renderContainerOffset.x)
+        && (element.y - squareRadius + this.renderContainerOffset.y < touchY) && (touchY < element.y + squareRadius + this.renderContainerOffset.y)) {
+        this.game.onKeyDown(element.action);
+      }
+    });
+  }
 
   private startGame() {
+    this.cleanupMenu();
+    if (this.gameScoreText) this.uiRenderGroup.addChild(this.gameScoreText);
     this.currentGameState = GameState.InGame;
     sound.play('start-game');
     this.game.start();
+  }
+
+  private cleanupMenu() {
+    if (this.instructionsText) this.uiRenderGroup.removeChild(this.instructionsText);
+  }
+
+  private showMenu() {
+    if (this.instructionsText) {
+      this.uiRenderGroup.addChild(this.instructionsText);
+    }
   }
 
   private cleanupGame() {
@@ -377,19 +458,27 @@ export class SerpentsApp {
       this.mainRenderGroup.removeChild(this.bonusSprites[i]);
     }
 
+    this.bonusSprites = [];
+
     // clean-up for the obstacles
     for (let i = 0; i < this.obstaclesSprites.length; i++) {
       this.mainRenderGroup.removeChild(this.obstaclesSprites[i]);
     }
+
+    this.obstaclesSprites = [];
 
     // clean-up for the critters
     for (let i = 0; i < this.crittersSprites.length; i++) {
       this.mainRenderGroup.removeChild(this.crittersSprites[i]);
     }
 
+    this.crittersSprites = [];
+
     if (this.gameOverText) {
-      this.mainRenderGroup.removeChild(this.gameOverText);
+      this.uiRenderGroup.removeChild(this.gameOverText);
     }
+
+    if (this.gameScoreText) this.uiRenderGroup.removeChild(this.gameScoreText);
   }
 
   private updateSnakeSprites(snake: Snake): Sprite[] {
@@ -415,42 +504,65 @@ export class SerpentsApp {
     }
   }
 
-  private updateBonusesInStage(bonuses: Bonus[]) {
-    for (let i = 0; i < this.bonusSprites.length; i++) {
-      this.mainRenderGroup.removeChild(this.bonusSprites[i]);
-    }
+  private onBonusExpiredOrPicked(bonus: Bonus) {
+    // Find the index
+    let bonusIdx = this.game.bonuses.findIndex(b => b === bonus);
+    this.mainRenderGroup.removeChild(this.bonusSprites[bonusIdx]);
+    console.log(`Bonus of type ${bonus.type} expired or picked at index ${bonusIdx}`);
 
-    this.bonusSprites = [];
+    // remove the sprite from the list
+    if (bonusIdx >= 0 && bonusIdx < this.bonusSprites.length && bonusIdx < this.mappedBonusTexNames.length) {
+      this.bonusSprites.splice(bonusIdx, 1);
+      this.mappedBonusTexNames.splice(bonusIdx, 1);
+    } else if (this.bonusSprites.length != this.mappedBonusTexNames.length) {
+      console.log(`Error: Bonus sprites and mapped textures are out of sync`);
+    }
+  }
+
+  private onBonusSpawned(bonus: Bonus) {
+    const typeIndex = bonus.type;
+    const textureName = this.bonusTextureNames[typeIndex];
+    let bonusSprite = new Sprite(this.bonusSheet.value().textures[textureName]);
+    this.bonusSprites.push(bonusSprite);
+    this.mappedBonusTexNames.push(textureName);
+    this.mainRenderGroup.addChild(bonusSprite);
+    bonusSprite.x = bonus.x * 32;
+    bonusSprite.y = bonus.y * 32;
+    console.log(`Bonus of type ${bonus.type} spawned at ${bonus.x}, ${bonus.y}`);
+  }
+
+  private updateBonusesInStage(bonuses: Bonus[]) {
     for (let i = 0; i < bonuses.length; i++) {
       const typeIndex = bonuses[i].type;
       if (typeIndex < this.bonusTextureNames.length) {
         let bonusSprite;
         if (bonuses[i].remainingLifetime < Bonus.WARNING_DURATION) {
-          // Use AnimatedSprite if remaining lifetime is less than 2 seconds
+          // Use AnimatedSprite if remaining lifetime very low
           const textureName = "anim_" + this.bonusTextureNames[typeIndex];
-          const textures = this.bonusSheet.value().animations[textureName];
-          if (textures) {
-            bonusSprite = new AnimatedSprite(textures);
-            bonusSprite.animationSpeed = 2.0; // Adjust the animation speed as needed
-            bonusSprite.play();
-          } else {
-            console.log(`No animation found for texture: ${textureName}`);
-            bonusSprite = new Sprite(this.bonusSheet.value().textures[textureName]);
+
+          if (textureName != this.mappedBonusTexNames[i]) {
+            this.mainRenderGroup.removeChild(this.bonusSprites[i]);
+            this.mappedBonusTexNames[i] = textureName;
+            const textures = this.bonusSheet.value().animations[textureName];
+            if (textures) {
+              bonusSprite = new AnimatedSprite(textures);
+              bonusSprite.animationSpeed = 0.1; // Adjust the animation speed as needed
+              bonusSprite.play();
+            } else {
+              console.log(`No animation found for texture: ${textureName}`);
+              bonusSprite = new Sprite(this.bonusSheet.value().textures[textureName]);
+            }
+            this.bonusSprites[i] = bonusSprite;
+            this.mainRenderGroup.addChild(this.bonusSprites[i]);
           }
-        } else {
-          // Use regular Sprite if remaining lifetime is 2 seconds or more
-          bonusSprite = new Sprite(this.bonusSheet.value().textures[this.bonusTextureNames[typeIndex]]);
         }
-        bonusSprite.x = bonuses[i].x * 32;
-        bonusSprite.y = bonuses[i].y * 32;
-        this.bonusSprites.push(bonusSprite);
+        if (bonusSprite) {
+          bonusSprite.x = bonuses[i].x * 32;
+          bonusSprite.y = bonuses[i].y * 32;
+        }
       } else {
         console.log(`Invalid bonus type index: ${typeIndex}`);
       }
-    }
-
-    for (let i = 0; i < this.bonusSprites.length; i++) {
-      this.mainRenderGroup.addChild(this.bonusSprites[i]);
     }
   }
 
