@@ -25,6 +25,7 @@ export class Game {
 
   private CRITTER_CHANCE_TO_CHANGE_DIR = 0.2;
   private CRITTER_CHANCE_TO_SPAWN = 0.15;
+  private SNAKE_SPEED_INCREASE_PER_SECOND = 0.8;
 
   private solidBorders = false;
   private gamePaused = false;
@@ -153,7 +154,7 @@ export class Game {
   onSnakePickupCritter(critter: Critter) {
     console.log(`Snake picked up a critter of type ${critter.type}`);
   }
- 
+
   onBonusExpiredOrPicked(bonus: Bonus) {
     console.log(`Bonus of type ${bonus.type} expired or was picked`);
   }
@@ -233,19 +234,8 @@ export class Game {
 
     this.handleInput();
 
-    // Game speed control.
-    if (this.keyboardController.keys['speed-up'].pushed) {
-      this.keyboardController.popKeyState('speed-up');
-      if (this.snake.snakeSpeed < this.MAX_GAME_SPEED) {
-        this.snake.snakeSpeed = Math.min(this.snake.snakeSpeed + 5, this.MAX_GAME_SPEED);
-      }
-    }
-    if (this.keyboardController.keys['speed-down'].pushed) {
-      this.keyboardController.popKeyState('speed-down');
-      if (this.snake.snakeSpeed > this.MIN_GAME_SPEED) {
-        this.snake.snakeSpeed = Math.max(this.snake.snakeSpeed - 5, this.MIN_GAME_SPEED);
-      }
-    }
+    // Increase snake speed over time
+    this.snake.increaseSpeed(this.SNAKE_SPEED_INCREASE_PER_SECOND * (delta / 1000));
 
     const speedRatio = this.snake.snakeSpeed / (this.MAX_GAME_SPEED - this.MIN_GAME_SPEED);
     const targetSnakeDelta = this.MAX_DELTA_MS - (this.MAX_DELTA_MS - this.MIN_DELTA_MS) * speedRatio;
@@ -304,9 +294,9 @@ export class Game {
     // Check if the snake has eaten a critter
     for (let i = 0; i < this.critters.length; i++) {
       if (this.snake.body[0].x === this.critters[i].x && this.snake.body[0].y === this.critters[i].y) {
-        // TODO: check how to apply the critter effect to the snake
         this.snake.grow();
         this.snake.score += 10;
+        this.snake.decreaseSpeed(2); // Decrease speed by 2 units when the snake eats a critter
         this.critters.splice(i, 1);
         somethingChanged = true;
         this.onSnakePickupCritter(this.critters[i]);
@@ -358,16 +348,22 @@ export class Game {
       this.gameMap.addObstaclesToCollisionMap(this.obstacles);
       this.gameMap.addCrittersToCollisionMap(this.critters);
 
-      let emptySpot = this.gameMap.findEmptySpotInCollisionMap();
-      const bonusType = Math.floor(Math.random() * this.bonusTypesCount);
-      let newBonus = new Bonus(emptySpot.x, emptySpot.y, 10000, bonusType);
-      this.bonuses.push(newBonus);
-      this.onBonusSpawned(newBonus);
-      somethingChanged = true;
+      let maybeEmptySpot = this.gameMap.findEmptySpotInCollisionMap();
+      if (maybeEmptySpot.hasData()) {
+        this.spawnBonus(maybeEmptySpot.value());
+        somethingChanged = true;
+      }
     }
-
-
     return somethingChanged;
+  }
+
+  private spawnBonus(cell: { x: number, y: number }) {
+    const bonusType = Math.floor(Math.random() * this.bonusTypesCount);
+    // Add a variation of 4000 milliseconds
+    const variation = Math.random() * 3000;
+    let newBonus = new Bonus(cell.x, cell.y, 8500 + variation, bonusType);
+    this.bonuses.push(newBonus);
+    this.onBonusSpawned(newBonus);
   }
 
   private tryToMoveCritter(critter: Critter) {

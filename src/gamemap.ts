@@ -99,7 +99,7 @@ export class GameMap {
     return result;
   }
 
-  public findEmptySpotInCollisionMap(): { x: number, y: number } {
+  public findEmptySpotInCollisionMap(): Maybe<{ x: number, y: number }> {
     // Go through the entire matrix and move the available cells to an array
     let availableCells: { x: number, y: number }[] = [];
     for (let i = 0; i < this.width; i++) {
@@ -110,8 +110,12 @@ export class GameMap {
       }
     }
 
+    if (availableCells.length <= 0) {
+      return Maybe.None();
+    }
+
     let randomIndex = Math.floor(Math.random() * availableCells.length);
-    return availableCells[randomIndex];
+    return Maybe.Some(availableCells[randomIndex]);
   }
 
 };

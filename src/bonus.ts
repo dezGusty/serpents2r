@@ -59,6 +59,7 @@ export class Bonus {
         snake.score += 3;
         break;
     }
+    snake.decreaseSpeed(1); // Decrease speed by 1 unit when a bonus is applied
   }
 
 }

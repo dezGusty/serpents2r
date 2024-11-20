@@ -2,57 +2,44 @@
   "frames": {
       "bonus1.png":
       {
-          "frame": {"x":0,"y":0,"w":20,"h":20},
-          "duration": 200
+          "frame": {"x":0,"y":0,"w":20,"h":20}
       },
       "bonus2.png":
       {
-          "frame": {"x":20,"y":0,"w":20,"h":20},
-          "duration": 200
+          "frame": {"x":20,"y":0,"w":20,"h":20}
       },
       "bonus3.png":
       {
-          "frame": {"x":0,"y":20,"w":20,"h":20},
-          "duration": 200
+          "frame": {"x":0,"y":20,"w":20,"h":20}
       },
       "bonus4.png":
       {
-          "frame": {"x":20,"y":20,"w":20,"h":20},
-          "duration": 200
+          "frame": {"x":20,"y":20,"w":20,"h":20}
       },
       "empty.png":
       {
-          "frame": {"x":40,"y":0,"w":20,"h":20},
-          "duration": 100
+          "frame": {"x":40,"y":20,"w":20,"h":20}
       }
   },
 
   "animations": {
     "anim_bonus1.png": [
         "bonus1.png",
-        "empty.png",
-        "bonus1.png",
         "empty.png"
     ],
     "anim_bonus2.png": [
-        "bonus2.png",
-        "empty.png",
         "bonus2.png",
         "empty.png"
     ],
     "anim_bonus3.png": [
         "bonus3.png",
-        "empty.png",
-        "bonus3.png",
         "empty.png"
     ],
     "anim_bonus4.png": [
         "bonus4.png",
-        "empty.png",
-        "bonus4.png",
         "empty.png"
     ]
-  },
+},
 
   "meta": {
       "image": "bonusspritesheet.png",

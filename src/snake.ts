@@ -54,6 +54,9 @@ export class Snake {
   public cachedDirection: SnakeDirection = SnakeDirection.up;
   public nextDirection: SnakeDirection = SnakeDirection.up;
 
+  private MAX_GAME_SPEED = 200;
+  private MIN_GAME_SPEED = 1;
+  
   public snakeSpeed: number = 50;
   public score: number = 0;
 
@@ -62,6 +65,14 @@ export class Snake {
   }
 
   public speed() { return this.snakeSpeed; }
+
+  public increaseSpeed(delta: number) {
+    this.snakeSpeed = Math.min(this.snakeSpeed + delta, this.MAX_GAME_SPEED);
+  }
+
+  public decreaseSpeed(delta: number) {
+    this.snakeSpeed = Math.max(this.snakeSpeed - delta, this.MIN_GAME_SPEED);
+  }
 
   protected shiftSnakeBody() {
     for (let i = this.body.length - 1; i > 0; i--) {
@@ -125,6 +136,7 @@ export class Snake {
     let newPart = new SnakeBodyPart(last.x, last.y, last.type);
     newPart.spawned = false;
     this.body.push(newPart);
+    this.decreaseSpeed(1); // Decrease speed by 1 unit when the snake grows
   }
 
   public pullUp() {

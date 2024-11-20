@@ -45,6 +45,7 @@ export class SerpentsApp {
 
   private fpsText: Maybe<BitmapText> = Maybe.None();
   private gameScoreText?: BitmapText;
+  private snakeSpeedText?: BitmapText;
   private gameOverText?: BitmapText;
   private instructionsText?: Text;
   private messagesText?: Text;
@@ -60,9 +61,12 @@ export class SerpentsApp {
 
   private renderContainerOffset: { x: number, y: number } = { x: 0, y: 0 };
 
+  private CELL_SIZE = 32
+;
+
   private game: Game;
 
-  private tempMessage = '';
+  private tempMessage = "";
 
   constructor(public app: Application) {
     this.currentGameState = GameState.InMenu;
@@ -75,13 +79,13 @@ export class SerpentsApp {
   }
 
   public async initialize() {
-    const containingElement: Maybe<HTMLElement> = new Maybe(document.querySelector('body'));
+    const containingElement: Maybe<HTMLElement> = new Maybe(document.getElementById('game'));
 
     // Wait for the Renderer to be available
     await this.app.init({
       background: '#102229',
-      width: 800,
-      height: 320,
+      width: this.CELL_SIZE * 25,
+      height: this.CELL_SIZE * 10,
       resizeTo: containingElement.value()
     });
 
@@ -118,15 +122,16 @@ export class SerpentsApp {
 
   private setScalingForSize(width: number, height: number) {
     if (this.instructionsText) {
-      this.instructionsText.text += "\nResized to: " + width + 'x' + height;
+      this.instructionsText.text = this.tempMessage + "\nResized to: " + width + 'x' + height;
       console.log('Resized to: ' + width + 'x' + height);
     }
-    const herizontalScale = width / 800;
-    const verticalScale = height / 320;
+    const originalWindowSize = { width: this.CELL_SIZE * 25, height: this.CELL_SIZE * 10 };
+    const herizontalScale = width / originalWindowSize.width;
+    const verticalScale = height / originalWindowSize.height;
     // keep the aspect ratio
     const minScale = Math.min(herizontalScale, verticalScale);
     this.renderContainer.scale.set(minScale, minScale);
-    this.renderContainerOffset = { x: (width - 800 * minScale) / 2, y: (height - 320 * minScale) / 2 };
+    this.renderContainerOffset = { x: (width - originalWindowSize.width * minScale) / 2, y: (height - originalWindowSize.height * minScale) / 2 };
     this.renderContainer.position.set(this.renderContainerOffset.x, this.renderContainerOffset.y);
   }
 
@@ -183,11 +188,15 @@ export class SerpentsApp {
     await Assets.load('./GustysSerpentsFontL.xml');
 
     this.fpsText = new Maybe(new BitmapText({
-      text: 'FPS: 0', style: { fontFamily: 'GustysSerpents', fontSize: 18, align: 'left', },
+      text: 'FPS: 0', style: { fontFamily: 'GustysSerpents', fontSize: 18, align: 'left' },
     }));
 
     this.gameScoreText = new BitmapText({
-      text: 'Pts.: 0', style: { fontFamily: 'GustysSerpents', fontSize: 18, align: 'left', },
+      text: 'Score: 0', style: { fontFamily: 'GustysSerpents', fontSize: 18, align: 'left' },
+    });
+
+    this.snakeSpeedText = new BitmapText({
+      text: 'Speed: 1', style: { fontFamily: 'GustysSerpents', fontSize: 18, align: 'left' }
     });
 
     const style = new TextStyle({ fontFamily: 'Arial', fontSize: 18, fill: { color: '#ffffff', alpha: 1 }, stroke: { color: '#4a1850', width: 5, join: 'round' }, });
@@ -203,21 +212,29 @@ export class SerpentsApp {
     this.gameScoreText.x = 10;
     this.gameScoreText.y = 35;
 
+    this.snakeSpeedText.x = 10;
+    this.snakeSpeedText.y = 60;
+
     this.gameOverText.x = 200;
     this.gameOverText.y = 100;
 
-    this.instructionsText = new Text({
-      text: `Press ENTER to start the game. 
+    this.tempMessage = `Press ENTER to start the game. 
 
 Snake movement:
 - gamepad direction stick
 - keyb. WASD or dir keys
 - touch screen to enable on-screen controls
+
+Your speed increases constantly.
+Pick up bonuses and creeps to slow down 
+before it's no longer possible to control.
 `
-        + "\n" + this.tempMessage,
+      + "\n" + this.tempMessage;
+    this.instructionsText = new Text({
+      text: this.tempMessage,
       style,
     });
-    this.instructionsText.x = 240;
+    this.instructionsText.x = 200;
     this.instructionsText.y = 10;
     this.uiRenderGroup.addChild(this.instructionsText);
 
@@ -252,8 +269,8 @@ Snake movement:
         this.game.gameMap.tiles[i][j] = Math.floor(Math.random() * maxTerrainCount);
         let gameSprite = new Sprite(this.terrainSheet.value().textures[this.terrainTextureNames[this.game.gameMap.tiles[i][j]]]);
 
-        gameSprite.x = i * 32;
-        gameSprite.y = j * 32;
+        gameSprite.x = i * this.CELL_SIZE;
+        gameSprite.y = j * this.CELL_SIZE;
 
         this.terrainRenderGroup.addChild(gameSprite);
       }
@@ -307,7 +324,11 @@ Snake movement:
       }
 
       if (this.gameScoreText) {
-        this.gameScoreText.text = `Pts.: ${this.game.snake.score.toFixed(0)}`;
+        this.gameScoreText.text = `Score: ${this.game.snake.score.toFixed(0)}`;
+      }
+
+      if (this.snakeSpeedText) {
+        this.snakeSpeedText.text = `Speed: ${this.game.snake.speed().toFixed(0)}`;
       }
     });
   }
@@ -430,6 +451,7 @@ Snake movement:
   private startGame() {
     this.cleanupMenu();
     if (this.gameScoreText) this.uiRenderGroup.addChild(this.gameScoreText);
+    if (this.snakeSpeedText) this.uiRenderGroup.addChild(this.snakeSpeedText);
     this.currentGameState = GameState.InGame;
     sound.play('start-game');
     this.game.start();
@@ -479,14 +501,15 @@ Snake movement:
     }
 
     if (this.gameScoreText) this.uiRenderGroup.removeChild(this.gameScoreText);
+    if (this.snakeSpeedText) this.uiRenderGroup.removeChild(this.snakeSpeedText);
   }
 
   private updateSnakeSprites(snake: Snake): Sprite[] {
     let sprites: Sprite[] = [];
     for (let i = 0; i < snake.body.length; i++) {
       let snakeSprite = new Sprite(this.snakeSheet.value().textures[this.snakeTextureNames[snake.body[i].type]]);
-      snakeSprite.x = snake.body[i].x * 32;
-      snakeSprite.y = snake.body[i].y * 32;
+      snakeSprite.x = snake.body[i].x * this.CELL_SIZE;
+      snakeSprite.y = snake.body[i].y * this.CELL_SIZE;
       sprites.push(snakeSprite);
       snake.body[i].sprite = Maybe.Some(snakeSprite);
     }
@@ -526,8 +549,8 @@ Snake movement:
     this.bonusSprites.push(bonusSprite);
     this.mappedBonusTexNames.push(textureName);
     this.mainRenderGroup.addChild(bonusSprite);
-    bonusSprite.x = bonus.x * 32;
-    bonusSprite.y = bonus.y * 32;
+    bonusSprite.x = bonus.x * this.CELL_SIZE;
+    bonusSprite.y = bonus.y * this.CELL_SIZE;
     console.log(`Bonus of type ${bonus.type} spawned at ${bonus.x}, ${bonus.y}`);
   }
 
@@ -557,8 +580,8 @@ Snake movement:
           }
         }
         if (bonusSprite) {
-          bonusSprite.x = bonuses[i].x * 32;
-          bonusSprite.y = bonuses[i].y * 32;
+          bonusSprite.x = bonuses[i].x * this.CELL_SIZE;
+          bonusSprite.y = bonuses[i].y * this.CELL_SIZE;
         }
       } else {
         console.log(`Invalid bonus type index: ${typeIndex}`);
@@ -577,8 +600,8 @@ Snake movement:
       const typeIndex = obstacles[i].type;
       if (typeIndex < this.obstaclesTextureNames.length) {
         let obstacleSprite = new Sprite(this.obstaclesSheet.value().textures[this.obstaclesTextureNames[typeIndex]]);
-        obstacleSprite.x = obstacles[i].x * 32;
-        obstacleSprite.y = obstacles[i].y * 32;
+        obstacleSprite.x = obstacles[i].x * this.CELL_SIZE;
+        obstacleSprite.y = obstacles[i].y * this.CELL_SIZE;
         this.obstaclesSprites.push(obstacleSprite);
       } else {
         console.log(`Invalid obstacle type index: ${typeIndex}`);
@@ -618,8 +641,8 @@ Snake movement:
 
         if (textureName.length > 0) {
           let critterSprite = new Sprite(this.crittersSheet.value().textures[textureName]);
-          critterSprite.x = critters[i].x * 32;
-          critterSprite.y = critters[i].y * 32;
+          critterSprite.x = critters[i].x * this.CELL_SIZE;
+          critterSprite.y = critters[i].y * this.CELL_SIZE;
           this.crittersSprites.push(critterSprite);
         }
       } else {
