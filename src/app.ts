@@ -1,4 +1,4 @@
-import { Application, Sprite, Assets, Text, TextStyle, BitmapText, Spritesheet, AnimatedSprite, Texture, Container, TextOptions, TextStyleOptions } from 'pixi.js';
+import { Application, Sprite, Assets, Text, TextStyle, BitmapText, Spritesheet, AnimatedSprite, Texture, Container, TextStyleOptions } from 'pixi.js';
 import { GameMap } from './gamemap';
 import { KeyboardController, KeyboardControllerMode } from './keyboard-controller';
 import { Snake } from './snake';
