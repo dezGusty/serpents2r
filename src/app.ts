@@ -1,4 +1,4 @@
-import { Application, Sprite, Assets, Text, TextStyle, BitmapText, Spritesheet, AnimatedSprite, Texture, Container } from 'pixi.js';
+import { Application, Sprite, Assets, Text, TextStyle, BitmapText, Spritesheet, AnimatedSprite, Texture, Container, TextOptions, TextStyleOptions } from 'pixi.js';
 import { GameMap } from './gamemap';
 import { KeyboardController, KeyboardControllerMode } from './keyboard-controller';
 import { Snake } from './snake';
@@ -10,6 +10,7 @@ import { Obstacle } from './obstacle';
 import { Critter } from './critter';
 import { SnakeDirection } from './snake-direction';
 import { sound } from '@pixi/sound';
+import { FancyButton } from '@pixi/ui';
 
 export enum GameState {
   InMenu,
@@ -32,6 +33,7 @@ export class SerpentsApp {
   private bonusSheet: Maybe<Spritesheet> = Maybe.None();
   private crittersSheet: Maybe<Spritesheet> = Maybe.None();
   private obstaclesSheet: Maybe<Spritesheet> = Maybe.None();
+  private uiSheet: Maybe<Spritesheet> = Maybe.None();
 
   private mappedBonusTexNames: string[] = [];
   private bonusSprites: Sprite[] = [];
@@ -61,8 +63,11 @@ export class SerpentsApp {
 
   private renderContainerOffset: { x: number, y: number } = { x: 0, y: 0 };
 
-  private CELL_SIZE = 32
-;
+  private DEFAULT_FONT_STYLE: TextStyle | TextStyleOptions = { fontFamily: 'GustysSerpents', fontSize: 18, align: 'left' };
+  private CELL_SIZE = 32;
+
+  private startGameButton?: FancyButton;
+  private goBackToMenuButton?: FancyButton;
 
   private game: Game;
 
@@ -78,6 +83,10 @@ export class SerpentsApp {
     this.game = new Game(gameMap, this.keyboardController, this.gamepadController);
   }
 
+  /**
+   * Initializes the application. 
+   * This method should be called ONCE after the application is created.
+   */
   public async initialize() {
     const containingElement: Maybe<HTMLElement> = new Maybe(document.getElementById('game'));
 
@@ -118,6 +127,50 @@ export class SerpentsApp {
     this.app.renderer.on('resize', (width, height) => {
       this.setScalingForSize(width, height);
     });
+
+    this.startGameButton = new FancyButton({
+      defaultView: 'btn1_normal.png',
+      hoverView: 'btn1_hover.png',
+      pressedView: 'btn1_pressed.png',
+      text: new BitmapText({
+        text: 'Start', style: this.DEFAULT_FONT_STYLE,
+      }),
+      nineSliceSprite: [13, 13, 13, 13]
+    });
+    this.goBackToMenuButton = new FancyButton({
+      defaultView: 'btn1_normal.png',
+      hoverView: 'btn1_hover.png',
+      pressedView: 'btn1_pressed.png',
+      text: new BitmapText({
+        text: 'Ok', style: this.DEFAULT_FONT_STYLE,
+      }),
+      nineSliceSprite:  [13, 13, 13, 13]
+    });
+
+    if (this.startGameButton) {
+      this.startGameButton.x = 10;
+      this.startGameButton.y = 70;
+      this.startGameButton.scale.set(1.0, 1.0);
+      this.startGameButton.width = 150;
+      this.startGameButton.height = 50;
+      this.uiRenderGroup.addChild(this.startGameButton);
+      this.startGameButton.onPress.connect(() => {
+        console.log('Start game button pressed');
+        this.startGame();
+      });
+    }
+
+    if (this.goBackToMenuButton) {
+      this.goBackToMenuButton.x = 290;
+      this.goBackToMenuButton.y = 190;
+      // this.goBackToMenuButton.scale.set(2.0, 2.0);
+      this.goBackToMenuButton.width = 150;
+      this.goBackToMenuButton.height = 50;
+      this.goBackToMenuButton.onPress.connect(() => {
+        console.log('Go back to menu button pressed');
+        this.goToMenuFromPostGame();
+      });
+    }
   }
 
   private setScalingForSize(width: number, height: number) {
@@ -126,12 +179,18 @@ export class SerpentsApp {
       console.log('Resized to: ' + width + 'x' + height);
     }
     const originalWindowSize = { width: this.CELL_SIZE * 25, height: this.CELL_SIZE * 10 };
-    const herizontalScale = width / originalWindowSize.width;
-    const verticalScale = height / originalWindowSize.height;
     // keep the aspect ratio
-    const minScale = Math.min(herizontalScale, verticalScale);
+    const scaling = { x: width / originalWindowSize.width, y: height / originalWindowSize.height };
+    const minScale = Math.min(scaling.x, scaling.y);
     this.renderContainer.scale.set(minScale, minScale);
-    this.renderContainerOffset = { x: (width - originalWindowSize.width * minScale) / 2, y: (height - originalWindowSize.height * minScale) / 2 };
+
+    // Set-up an offset for the render container.
+    // It should be in the middle horizontally and about 20 pixels up from the middle vertically
+    this.renderContainerOffset = {
+      x: (width - originalWindowSize.width * minScale) / 2,
+      y: (height - originalWindowSize.height * minScale) / 2 - 20
+    };
+
     this.renderContainer.position.set(this.renderContainerOffset.x, this.renderContainerOffset.y);
   }
 
@@ -170,9 +229,13 @@ export class SerpentsApp {
     }
 
     this.obstaclesSheet = new Maybe(await Assets.load('obstaclesspritesheet.json'));
-
     for (let key in this.obstaclesSheet.value().textures) {
       this.obstaclesTextureNames.push(key);
+    }
+
+    this.uiSheet = new Maybe(await Assets.load('ui/uispritesheet.json'));
+    if (!this.uiSheet.hasData()) {
+      console.error('Failed to load the UI spritesheet');
     }
 
     this.touchTexture = await Assets.load('touch/touch_area.png');
@@ -187,17 +250,9 @@ export class SerpentsApp {
   public async initializeTexts() {
     await Assets.load('./GustysSerpentsFontL.xml');
 
-    this.fpsText = new Maybe(new BitmapText({
-      text: 'FPS: 0', style: { fontFamily: 'GustysSerpents', fontSize: 18, align: 'left' },
-    }));
-
-    this.gameScoreText = new BitmapText({
-      text: 'Score: 0', style: { fontFamily: 'GustysSerpents', fontSize: 18, align: 'left' },
-    });
-
-    this.snakeSpeedText = new BitmapText({
-      text: 'Speed: 1', style: { fontFamily: 'GustysSerpents', fontSize: 18, align: 'left' }
-    });
+    this.fpsText = new Maybe(new BitmapText({ text: 'FPS: 0', style: this.DEFAULT_FONT_STYLE, }));
+    this.gameScoreText = new BitmapText({ text: 'Score: 0', style: this.DEFAULT_FONT_STYLE, });
+    this.snakeSpeedText = new BitmapText({ text: 'Speed: 1', style: this.DEFAULT_FONT_STYLE });
 
     const style = new TextStyle({ fontFamily: 'Arial', fontSize: 18, fill: { color: '#ffffff', alpha: 1 }, stroke: { color: '#4a1850', width: 5, join: 'round' }, });
 
@@ -234,7 +289,7 @@ before it's no longer possible to control.
       text: this.tempMessage,
       style,
     });
-    this.instructionsText.x = 200;
+    this.instructionsText.x = 230;
     this.instructionsText.y = 10;
     this.uiRenderGroup.addChild(this.instructionsText);
 
@@ -318,6 +373,7 @@ before it's no longer possible to control.
           this.currentGameState = GameState.PostGameGameOver;
           if (this.gameOverText != undefined) {
             this.uiRenderGroup.addChild(this.gameOverText);
+            if (this.goBackToMenuButton) this.uiRenderGroup.addChild(this.goBackToMenuButton);
           }
           // sound.play('game-over');
         }
@@ -372,10 +428,9 @@ before it's no longer possible to control.
           this.startGame();
         }
       } else if (this.currentGameState === GameState.PostGameGameOver) {
-        // Any key => move to the menu
-        this.cleanupGame();
-        this.showMenu();
-        this.currentGameState = GameState.InMenu;
+        if (event.code === 'Enter') {
+          this.goToMenuFromPostGame();
+        }
       }
     });
 
@@ -395,9 +450,9 @@ before it's no longer possible to control.
         return;
       }
 
-      if (this.currentGameState === GameState.InMenu) {
-        this.startGame();
-      }
+      // if (this.currentGameState === GameState.InMenu) {
+      //   this.startGame();
+      // }
 
       if (this.currentGameState === GameState.InGame) {
         // handled inside the Game class
@@ -414,9 +469,10 @@ before it's no longer possible to control.
       }
 
       else if (this.currentGameState === GameState.PostGameGameOver) {
-        // Any key => move to the menu
-        this.cleanupGame();
-        this.currentGameState = GameState.InMenu;
+        // // Any key => move to the menu
+        // this.cleanupGame();
+        // this.showMenu();
+        // this.currentGameState = GameState.InMenu;
       }
     }, false);
   }
@@ -457,14 +513,21 @@ before it's no longer possible to control.
     this.game.start();
   }
 
+  private goToMenuFromPostGame() {
+    this.cleanupGame();
+    this.showMenu();
+    this.currentGameState = GameState.InMenu;
+  }
+
   private cleanupMenu() {
     if (this.instructionsText) this.uiRenderGroup.removeChild(this.instructionsText);
+    if (this.startGameButton) this.uiRenderGroup.removeChild(this.startGameButton);
   }
 
   private showMenu() {
-    if (this.instructionsText) {
-      this.uiRenderGroup.addChild(this.instructionsText);
-    }
+    if (this.instructionsText) this.uiRenderGroup.addChild(this.instructionsText);
+    if (this.startGameButton) this.uiRenderGroup.addChild(this.startGameButton);
+    if (this.goBackToMenuButton) this.uiRenderGroup.removeChild(this.goBackToMenuButton);
   }
 
   private cleanupGame() {
