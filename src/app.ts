@@ -349,11 +349,11 @@ Bonuses you don't pick up could turn into obstacles.
   public async loadSounds() {
     // Add sounds
     console.log('Loading sounds...');
-    await sound.add('game-over', 'game_over.ogg');
-    await sound.add('eat-bonus', 'audio/drop_004.ogg');
-    await sound.add('start-game', 'ready.ogg');
+    await sound.add('spawn-bonus', 'audio/drop_004.ogg');
+    await sound.add('eat-bonus', 'audio/drop_003.ogg');
+    await sound.add('start-game', 'audio/jingles_PIZZI10.ogg');
     await sound.add('snake-dead', 'audio/error_008.ogg');
-    await sound.add('eat-critter', 'sfx_powerup.wav');
+    await sound.add('eat-critter', 'audio/sfx_powerup.wav');
     await sound.add('spawn-critter', 'audio/bong_001.ogg');
     await sound.add('bonus-becomes-obstacle', 'audio/switch_007.ogg');
 
@@ -393,6 +393,7 @@ Bonuses you don't pick up could turn into obstacles.
       this.onBonusExpiredOrPicked(bonus);
     }
     this.game.onBonusSpawned = (bonus: Bonus) => {
+      sound.play('spawn-bonus');
       this.onBonusSpawned(bonus);
     };
     this.game.onBonusToObstacle = (_bonus: Bonus) => {
@@ -428,7 +429,6 @@ Bonuses you don't pick up could turn into obstacles.
             this.uiRenderGroup.addChild(this.gameOverText);
             if (this.goBackToMenuButton) this.uiRenderGroup.addChild(this.goBackToMenuButton);
           }
-          // sound.play('game-over');
         }
       }
 
