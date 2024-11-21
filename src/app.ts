@@ -11,6 +11,7 @@ import { Critter } from './critter';
 import { SnakeDirection } from './snake-direction';
 import { sound } from '@pixi/sound';
 import { FancyButton } from '@pixi/ui';
+import pkg from './../package.json';
 
 export enum GameState {
   InMenu,
@@ -21,6 +22,7 @@ export enum GameState {
 export class SerpentsApp {
 
   private currentGameState: GameState = GameState.InMenu;
+  private version: string = pkg.version;
 
   private terrainTextureNames: string[] = [];
   private snakeTextureNames: string[] = [];
@@ -46,6 +48,8 @@ export class SerpentsApp {
   private displayOnScreenTouchControls: boolean = false;
 
   private fpsText: Maybe<BitmapText> = Maybe.None();
+  private gameTitleText?: BitmapText;
+  private gameSubtitleText?: BitmapText;
   private gameScoreText?: BitmapText;
   private snakeSpeedText?: BitmapText;
   private gameOverText?: BitmapText;
@@ -54,6 +58,7 @@ export class SerpentsApp {
 
   private keyboardController: KeyboardController;
   private gamepadController: GamepadController;
+  // private touchDebugGraphics = new Graphics();
 
   // Add render groups for layering
   private terrainRenderGroup: Container = new Container({ isRenderGroup: true });
@@ -70,6 +75,19 @@ export class SerpentsApp {
   private goBackToMenuButton?: FancyButton;
 
   private game: Game;
+
+  // Store the touch zones for the directions and actions
+  private touchZoneActions: { x: number, y: number, action: string }[] = [
+    { x: 109, y: 171, action: 'up' },
+    { x: 109, y: 292, action: 'down' },
+    { x: 50, y: 232, action: 'left' },
+    { x: 169, y: 232, action: 'right' },
+
+    { x: 689, y: 171, action: 'up' },
+    { x: 689, y: 292, action: 'down' },
+    { x: 630, y: 232, action: 'left' },
+    { x: 749, y: 232, action: 'right' }
+  ];
 
   private tempMessage = "";
 
@@ -144,8 +162,17 @@ export class SerpentsApp {
       text: new BitmapText({
         text: 'Ok', style: this.DEFAULT_FONT_STYLE,
       }),
-      nineSliceSprite:  [13, 13, 13, 13]
+      nineSliceSprite: [13, 13, 13, 13]
     });
+
+    // this.touchZoneActions.forEach(element => {
+    //   const squareRadius = 29;
+
+    //   this.touchDebugGraphics.rect(element.x - squareRadius + this.renderContainerOffset.x
+    //     , element.y - squareRadius + this.renderContainerOffset.y, squareRadius * 2, squareRadius * 2);
+    //   this.touchDebugGraphics.fill(0xde3249);
+    // });
+    // this.uiRenderGroup.addChild(this.touchDebugGraphics);
 
     if (this.startGameButton) {
       this.startGameButton.x = 10;
@@ -243,7 +270,7 @@ export class SerpentsApp {
     this.touchSpriteLeft.x = 30;
     this.touchSpriteLeft.y = 150;
     this.touchSpriteRight = new Sprite(this.touchTexture);
-    this.touchSpriteRight.x = 630;
+    this.touchSpriteRight.x = 610;
     this.touchSpriteRight.y = 150;
   }
 
@@ -257,32 +284,49 @@ export class SerpentsApp {
     const style = new TextStyle({ fontFamily: 'Arial', fontSize: 18, fill: { color: '#ffffff', alpha: 1 }, stroke: { color: '#4a1850', width: 5, join: 'round' }, });
 
     this.gameOverText = new BitmapText({
-      text: 'Game Over!', style: { fontFamily: 'GustysSerpents', fontSize: 72, align: 'center', },
+      text: 'Game Over!', style: { fontFamily: 'GustysSerpents', fontSize: 72, align: 'center' },
     });
+
+    this.gameTitleText = new BitmapText({
+      text: 'Serpents 2 Respawned', style: { ...this.DEFAULT_FONT_STYLE, fontSize: 48 }
+    });
+
+    this.gameSubtitleText = new BitmapText({
+      text: `v. ${this.version}, by Gusty`, style: { ...this.DEFAULT_FONT_STYLE, fontSize: 24 }
+    });
+    this.gameTitleText.x = 260;
+    this.gameTitleText.y = 10;
+    this.uiRenderGroup.addChild(this.gameTitleText);
+
+    this.gameSubtitleText.x = 530;
+    this.gameSubtitleText.y = 60;
+    this.uiRenderGroup.addChild(this.gameSubtitleText);
 
     this.fpsText.value().x = 10;
     this.fpsText.value().y = 10;
+    this.fpsText.value().alpha = 0.7;
+
     this.uiRenderGroup.addChild(this.fpsText.value());
 
     this.gameScoreText.x = 10;
     this.gameScoreText.y = 35;
+    this.gameScoreText.alpha = 0.7;
 
     this.snakeSpeedText.x = 10;
     this.snakeSpeedText.y = 60;
+    this.snakeSpeedText.alpha = 0.7;
 
     this.gameOverText.x = 200;
     this.gameOverText.y = 100;
 
-    this.tempMessage = `Press ENTER to start the game. 
-
-Snake movement:
-- gamepad direction stick
-- keyb. WASD or dir keys
+    this.tempMessage = `Snake movement:
+- gamepad direction stick, keyb. (WASD/dir keys)
 - touch screen to enable on-screen controls
 
 Your speed increases constantly.
 Pick up bonuses and creeps to slow down 
 before it's no longer possible to control.
+Bonuses you don't pick up could turn into obstacles.
 `
       + "\n" + this.tempMessage;
     this.instructionsText = new Text({
@@ -290,7 +334,7 @@ before it's no longer possible to control.
       style,
     });
     this.instructionsText.x = 230;
-    this.instructionsText.y = 10;
+    this.instructionsText.y = 90;
     this.uiRenderGroup.addChild(this.instructionsText);
 
     this.messagesText = new Text({
@@ -306,10 +350,12 @@ before it's no longer possible to control.
     // Add sounds
     console.log('Loading sounds...');
     await sound.add('game-over', 'game_over.ogg');
-    await sound.add('eat-bonus', 'drop_004.ogg');
+    await sound.add('eat-bonus', 'audio/drop_004.ogg');
     await sound.add('start-game', 'ready.ogg');
-    await sound.add('snake-dead', 'error_008.ogg');
+    await sound.add('snake-dead', 'audio/error_008.ogg');
     await sound.add('eat-critter', 'sfx_powerup.wav');
+    await sound.add('spawn-critter', 'audio/bong_001.ogg');
+    await sound.add('bonus-becomes-obstacle', 'audio/switch_007.ogg');
 
     console.log('Loaded sounds...');
 
@@ -349,6 +395,13 @@ before it's no longer possible to control.
     this.game.onBonusSpawned = (bonus: Bonus) => {
       this.onBonusSpawned(bonus);
     };
+    this.game.onBonusToObstacle = (_bonus: Bonus) => {
+      sound.play('bonus-becomes-obstacle');
+    };
+    this.game.onCritterSpawned = (_critter: Critter) => {
+      sound.play('spawn-critter');
+      //this.onCritterSpawned(critter);
+    }
   }
 
   public setupMainLoop(): void {
@@ -450,13 +503,7 @@ before it's no longer possible to control.
         return;
       }
 
-      // if (this.currentGameState === GameState.InMenu) {
-      //   this.startGame();
-      // }
-
       if (this.currentGameState === GameState.InGame) {
-        // handled inside the Game class
-        // this.keyboardController.keyupHandler(event);
         if (event.touches.length > 0) {
           console.log(`Touch start: ${event.touches.item(0)?.clientX}, ${event.touches.item(0)?.clientY}`);
           const touchX = event.touches.item(0)?.clientX;
@@ -466,13 +513,6 @@ before it's no longer possible to control.
             this.reactToTouchInput(touchX, touchY);
           }
         }
-      }
-
-      else if (this.currentGameState === GameState.PostGameGameOver) {
-        // // Any key => move to the menu
-        // this.cleanupGame();
-        // this.showMenu();
-        // this.currentGameState = GameState.InMenu;
       }
     }, false);
   }
@@ -484,19 +524,7 @@ before it's no longer possible to control.
     touchX = touchX / this.renderContainer.scale.x;
     touchY = touchY / this.renderContainer.scale.y;
 
-    // Store the touch zones for the directions and actions
-    const touchZoneActions: { x: number, y: number, action: string }[] = [
-      { x: 109, y: 171, action: 'up' },
-      { x: 109, y: 292, action: 'down' },
-      { x: 50, y: 232, action: 'left' },
-      { x: 169, y: 232, action: 'right' },
-      { x: 706, y: 171, action: 'up' },
-      { x: 706, y: 292, action: 'down' },
-      { x: 671, y: 232, action: 'left' },
-      { x: 746, y: 232, action: 'right' }
-    ];
-
-    touchZoneActions.forEach(element => {
+    this.touchZoneActions.forEach(element => {
       if ((element.x - squareRadius + this.renderContainerOffset.x < touchX) && (touchX < element.x + squareRadius + this.renderContainerOffset.x)
         && (element.y - squareRadius + this.renderContainerOffset.y < touchY) && (touchY < element.y + squareRadius + this.renderContainerOffset.y)) {
         this.game.onKeyDown(element.action);
@@ -522,12 +550,16 @@ before it's no longer possible to control.
   private cleanupMenu() {
     if (this.instructionsText) this.uiRenderGroup.removeChild(this.instructionsText);
     if (this.startGameButton) this.uiRenderGroup.removeChild(this.startGameButton);
+    if (this.gameTitleText) this.uiRenderGroup.removeChild(this.gameTitleText);
+    if (this.gameSubtitleText) this.uiRenderGroup.removeChild(this.gameSubtitleText);
   }
 
   private showMenu() {
     if (this.instructionsText) this.uiRenderGroup.addChild(this.instructionsText);
     if (this.startGameButton) this.uiRenderGroup.addChild(this.startGameButton);
     if (this.goBackToMenuButton) this.uiRenderGroup.removeChild(this.goBackToMenuButton);
+    if (this.gameTitleText) this.uiRenderGroup.addChild(this.gameTitleText);
+    if (this.gameSubtitleText) this.uiRenderGroup.addChild(this.gameSubtitleText);
   }
 
   private cleanupGame() {

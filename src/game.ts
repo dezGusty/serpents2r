@@ -159,8 +159,16 @@ export class Game {
     console.log(`Bonus of type ${bonus.type} expired or was picked`);
   }
 
+  onBonusToObstacle(bonus: Bonus) {
+    console.log(`Bonus of type ${bonus.type} transformed to obstacle`);
+  }
+
   onBonusSpawned(bonus: Bonus) {
     console.log(`Bonus of type ${bonus.type} spawned`);
+  }
+
+  onCritterSpawned(critter: Critter) {
+    console.log(`Critter of type ${critter.type} spawned`);
   }
 
   /**
@@ -259,26 +267,39 @@ export class Game {
 
     // Move critters
     somethingChanged = this.moveCritters(delta) || somethingChanged;
+    let needToSpawnCritters = false;
 
     // Ensure at least MIN_CRITTERS critters are present
     if (this.critters.length < this.MIN_CRITTERS) {
-      const x = Math.floor(Math.random() * this.gameMap.width);
-      const y = Math.floor(Math.random() * this.gameMap.height);
-      const speed = Math.random() * 2 + 1; // Random speed between 1 and 3
-      const direction = Math.floor(Math.random() * 4); // Random initial direction
-      this.critters.push(new Critter(x, y, speed, direction));
-      somethingChanged = true;
+      needToSpawnCritters = true;
     }
+
 
     // Spawn additional critters with a small chance per second if less than MAX_CRITTERS
     if (this.critters.length < this.MAX_CRITTERS
       && Math.random() < this.CRITTER_CHANCE_TO_SPAWN * (delta / 1000)) {
-      const x = Math.floor(Math.random() * this.gameMap.width);
-      const y = Math.floor(Math.random() * this.gameMap.height);
-      const speed = Math.random() * 2 + 1; // Random speed between 1 and 3
-      const direction = Math.floor(Math.random() * 4); // Random initial direction
-      this.critters.push(new Critter(x, y, speed, direction));
-      somethingChanged = true;
+      needToSpawnCritters = true;
+    }
+
+
+    if (needToSpawnCritters) {
+
+      this.gameMap.clearCollisionMap();
+      this.gameMap.addSnakeToCollisionMap(this.snake);
+      this.gameMap.addBonusesToCollisionMap(this.bonuses);
+      this.gameMap.addObstaclesToCollisionMap(this.obstacles);
+      this.gameMap.addCrittersToCollisionMap(this.critters);
+
+      let maybeEmptySpot = this.gameMap.findEmptySpotInCollisionMap();
+      if (maybeEmptySpot.hasData()) {
+        const speed = Math.random() * 2 + 1; // Random speed between 1 and 3
+        const direction = Math.floor(Math.random() * 4); // Random initial direction
+        const newCritter = new Critter(maybeEmptySpot.value().x, maybeEmptySpot.value().y, speed, direction);
+        this.critters.push(newCritter);
+        this.onCritterSpawned(newCritter);
+        somethingChanged = true;
+      }
+
     }
 
     // Check if the snake has eaten a bonus
@@ -312,8 +333,9 @@ export class Game {
     // Handle expired bonuses and spawn obstacles
     for (let i = 0; i < this.bonuses.length; i++) {
       if (this.bonuses[i].remainingLifetime <= 0) {
-        // 20% chance to spawn an obstacle
+        // some chance (e.g. 20%) to spawn an obstacle
         if (Math.random() < Bonus.CHANCE_TO_TRANSFORM_TO_OBSTACLE) {
+          this.onBonusToObstacle(this.bonuses[i]);
           this.obstacles.push(new Obstacle(this.bonuses[i].x, this.bonuses[i].y, 1));
         }
         somethingChanged = true;
