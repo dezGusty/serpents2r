@@ -185,10 +185,10 @@ export class SerpentsApp {
     this.renderContainer.scale.set(minScale, minScale);
 
     // Set-up an offset for the render container.
-    // It should be in the middle horizontally and about 20 pixels up from the middle vertically
+    // It should be in the middle horizontally and about 30 pixels up from the middle vertically
     this.renderContainerOffset = {
       x: (width - originalWindowSize.width * minScale) / 2,
-      y: (height - originalWindowSize.height * minScale) / 2 - 20
+      y: Math.max((height - originalWindowSize.height * minScale) / 2 - 30, 0)
     };
 
     this.renderContainer.position.set(this.renderContainerOffset.x, this.renderContainerOffset.y);

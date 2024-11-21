@@ -21,28 +21,18 @@ body {
   align-content: center;
 }
 
-@media screen and (min-height: 331px) and (max-height: 393px) and (min-width: 801px) and (max-width: 860px) {
+@media screen and (min-height: 331px) and (max-height: 373px) and (min-width: 801px) and (max-width: 860px) {
   body {
-    width: 850px;
+    width: 820px;
     height: 350px;
     background-color: darkolivegreen;
   }
 }
 
-@media screen and (min-width: 801px) and (max-width: 393px) {
+@media screen and (min-height: 373px) and (max-height: 393px) and (min-width: 801px) and (max-width: 860px) {
   body {
-    width: 1000px;
-    height: 375px;
+    width: 820px;
+    height: 386px;
     background-color: darkolivegreen;
   }
-}
-
-
-@media screen and (max-width: 810px) and (max-height: 330px) {
-  body {
-    width: 800px;
-    height: 320px;
-    background-color: darkolivegreen;
-  }
-
 }
