@@ -2,7 +2,9 @@
     "frames": {
         "btn1_normal.png": { "frame": {"x": 0,"y": 0,"w": 64,"h": 32}},
         "btn1_hover.png": {"frame": {"x": 0,"y": 32,"w": 64,"h": 32}},
-        "btn1_pressed.png": {"frame": {"x": 0,"y": 64,"w": 64,"h": 32}}
+        "btn1_pressed.png": {"frame": {"x": 0,"y": 64,"w": 64,"h": 32}},
+        "input_bg.png": {"frame": {"x": 0,"y": 96,"w": 24,"h": 32}},
+        "stylized_border.png": {"frame": {"x": 66,"y": 1,"w": 124,"h": 124}}
     },
     "animations": {
         "btn1_hover.png": {
@@ -25,8 +27,8 @@
         "image": "buttons.png",
         "format": "RGBA8888",
         "size": {
-            "w": 64,
-            "h": 96
+            "w": 256,
+            "h": 128
         },
         "scale": "1"
     }

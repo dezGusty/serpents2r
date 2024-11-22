@@ -1,4 +1,4 @@
-import { Application, Sprite, Assets, Text, TextStyle, BitmapText, Spritesheet, AnimatedSprite, Texture, Container, TextStyleOptions } from 'pixi.js';
+import { Application, Sprite, Assets, Text, TextStyle, BitmapText, Spritesheet, AnimatedSprite, Texture, Container, TextStyleOptions, NineSliceSprite } from 'pixi.js';
 import { GameMap } from './gamemap';
 import { KeyboardController, KeyboardControllerMode } from './keyboard-controller';
 import { Snake } from './snake';
@@ -10,13 +10,16 @@ import { Obstacle } from './obstacle';
 import { Critter } from './critter';
 import { SnakeDirection } from './snake-direction';
 import { sound } from '@pixi/sound';
-import { FancyButton } from '@pixi/ui';
+import { FancyButton, Input } from '@pixi/ui';
+import { Highscores, Score } from './highscores';
 import pkg from './../package.json';
 
 export enum GameState {
   InMenu,
+  ViewHighscores,
   InGame,
-  PostGameGameOver
+  PostGameGameOver,
+  PostGameEnterHighscore
 }
 
 export class SerpentsApp {
@@ -53,12 +56,15 @@ export class SerpentsApp {
   private gameScoreText?: BitmapText;
   private snakeSpeedText?: BitmapText;
   private gameOverText?: BitmapText;
+  private highscoresText?: BitmapText;
   private instructionsText?: Text;
   private messagesText?: Text;
 
+  private newHighscoreNameInput?: Input = undefined;
+  private playerName: string = 'Player 1';
+
   private keyboardController: KeyboardController;
   private gamepadController: GamepadController;
-  // private touchDebugGraphics = new Graphics();
 
   // Add render groups for layering
   private terrainRenderGroup: Container = new Container({ isRenderGroup: true });
@@ -72,9 +78,11 @@ export class SerpentsApp {
   private CELL_SIZE = 32;
 
   private startGameButton?: FancyButton;
+  private viewHighscoresButton?: FancyButton;
   private goBackToMenuButton?: FancyButton;
 
   private game: Game;
+  private highscores: Highscores = new Highscores();
 
   // Store the touch zones for the directions and actions
   private touchZoneActions: { x: number, y: number, action: string }[] = [
@@ -90,6 +98,7 @@ export class SerpentsApp {
   ];
 
   private tempMessage = "";
+  private needToAddHighscore: boolean = false;
 
   constructor(public app: Application) {
     this.currentGameState = GameState.InMenu;
@@ -165,6 +174,17 @@ export class SerpentsApp {
       nineSliceSprite: [13, 13, 13, 13]
     });
 
+    this.viewHighscoresButton = new FancyButton({
+      defaultView: 'btn1_normal.png',
+      hoverView: 'btn1_hover.png',
+      pressedView: 'btn1_pressed.png',
+      text: new BitmapText({
+        text: 'Highscores', style: this.DEFAULT_FONT_STYLE,
+      }),
+      nineSliceSprite: [13, 13, 13, 13]
+    });
+
+
     // this.touchZoneActions.forEach(element => {
     //   const squareRadius = 29;
 
@@ -177,7 +197,6 @@ export class SerpentsApp {
     if (this.startGameButton) {
       this.startGameButton.x = 10;
       this.startGameButton.y = 70;
-      this.startGameButton.scale.set(1.0, 1.0);
       this.startGameButton.width = 150;
       this.startGameButton.height = 50;
       this.uiRenderGroup.addChild(this.startGameButton);
@@ -190,7 +209,6 @@ export class SerpentsApp {
     if (this.goBackToMenuButton) {
       this.goBackToMenuButton.x = 290;
       this.goBackToMenuButton.y = 190;
-      // this.goBackToMenuButton.scale.set(2.0, 2.0);
       this.goBackToMenuButton.width = 150;
       this.goBackToMenuButton.height = 50;
       this.goBackToMenuButton.onPress.connect(() => {
@@ -198,6 +216,51 @@ export class SerpentsApp {
         this.goToMenuFromPostGame();
       });
     }
+
+    if (this.viewHighscoresButton) {
+      this.viewHighscoresButton.x = 10;
+      this.viewHighscoresButton.y = 130;
+      this.viewHighscoresButton.width = 150;
+      this.viewHighscoresButton.height = 50;
+      this.viewHighscoresButton.onPress.connect(() => {
+        console.log('View highscores button pressed');
+        this.showHighscores();
+      });
+      this.uiRenderGroup.addChild(this.viewHighscoresButton);
+    }
+
+    this.newHighscoreNameInput = new Input({
+      bg: 'input_bg.png',
+      placeholder: 'Enter your name',
+      value: this.playerName,
+      cleanOnFocus: true,
+      padding: [3, 3, 3, 3],
+      nineSliceSprite: [4, 4, 4, 4],
+      textStyle: this.DEFAULT_FONT_STYLE
+    });
+
+    if (this.newHighscoreNameInput) {
+      this.newHighscoreNameInput.x = 10;
+      this.newHighscoreNameInput.y = 190;
+      this.newHighscoreNameInput.width = 150;
+      this.newHighscoreNameInput.height = 50;
+      this.newHighscoreNameInput.onChange.connect(value => {
+        this.playerName = value;
+      });
+    }
+
+    let auxSprite =
+      new NineSliceSprite({
+        texture: this.uiSheet.value().textures['stylized_border.png'],
+        leftWidth: 41,
+        rightWidth: 41,
+        topHeight: 41,
+        bottomHeight: 41
+      }
+      );
+    auxSprite.width = this.CELL_SIZE * 25;
+    auxSprite.height = this.CELL_SIZE * 10;
+    this.uiRenderGroup.addChild(auxSprite);
   }
 
   private setScalingForSize(width: number, height: number) {
@@ -278,47 +341,41 @@ export class SerpentsApp {
     await Assets.load('./GustysSerpentsFontL.xml');
 
     this.fpsText = new Maybe(new BitmapText({ text: 'FPS: 0', style: this.DEFAULT_FONT_STYLE, }));
-    this.gameScoreText = new BitmapText({ text: 'Score: 0', style: this.DEFAULT_FONT_STYLE, });
-    this.snakeSpeedText = new BitmapText({ text: 'Speed: 1', style: this.DEFAULT_FONT_STYLE });
-
-    const style = new TextStyle({ fontFamily: 'Arial', fontSize: 18, fill: { color: '#ffffff', alpha: 1 }, stroke: { color: '#4a1850', width: 5, join: 'round' }, });
-
-    this.gameOverText = new BitmapText({
-      text: 'Game Over!', style: { fontFamily: 'GustysSerpents', fontSize: 72, align: 'center' },
-    });
-
-    this.gameTitleText = new BitmapText({
-      text: 'Serpents 2 Respawned', style: { ...this.DEFAULT_FONT_STYLE, fontSize: 48 }
-    });
-
-    this.gameSubtitleText = new BitmapText({
-      text: `v. ${this.version}, by Gusty`, style: { ...this.DEFAULT_FONT_STYLE, fontSize: 24 }
-    });
-    this.gameTitleText.x = 260;
-    this.gameTitleText.y = 10;
-    this.uiRenderGroup.addChild(this.gameTitleText);
-
-    this.gameSubtitleText.x = 530;
-    this.gameSubtitleText.y = 60;
-    this.uiRenderGroup.addChild(this.gameSubtitleText);
-
     this.fpsText.value().x = 10;
     this.fpsText.value().y = 10;
     this.fpsText.value().alpha = 0.7;
 
-    this.uiRenderGroup.addChild(this.fpsText.value());
-
+    this.gameScoreText = new BitmapText({ text: 'Score: 0', style: this.DEFAULT_FONT_STYLE, });
     this.gameScoreText.x = 10;
     this.gameScoreText.y = 35;
     this.gameScoreText.alpha = 0.7;
 
+    this.snakeSpeedText = new BitmapText({ text: 'Speed: 1', style: this.DEFAULT_FONT_STYLE });
     this.snakeSpeedText.x = 10;
     this.snakeSpeedText.y = 60;
     this.snakeSpeedText.alpha = 0.7;
 
-    this.gameOverText.x = 200;
-    this.gameOverText.y = 100;
 
+    this.gameOverText = new BitmapText({ text: 'Game Over!', style: { fontFamily: 'GustysSerpents', fontSize: 72, align: 'center' }, });
+    this.gameOverText.position = { x: 200, y: 100 };
+
+    this.gameTitleText = new BitmapText({ text: 'Serpents 2 Respawned', style: { ...this.DEFAULT_FONT_STYLE, fontSize: 48 } });
+    this.gameTitleText.position = { x: 260, y: 10 };
+    this.uiRenderGroup.addChild(this.gameTitleText);
+
+    this.gameSubtitleText = new BitmapText({ text: `v. ${this.version}, by Gusty`, style: { ...this.DEFAULT_FONT_STYLE, fontSize: 24 } });
+    this.gameSubtitleText.position = { x: 530, y: 60 };
+    this.uiRenderGroup.addChild(this.gameSubtitleText);
+
+    this.highscoresText = new BitmapText({ text: 'Highscores:', style: { ...this.DEFAULT_FONT_STYLE, fontSize: 24 } });
+    this.highscoresText.position = { x: 260, y: 10 };
+
+    this.uiRenderGroup.addChild(this.fpsText.value());
+
+
+
+
+    const style = new TextStyle({ fontFamily: 'Arial', fontSize: 18, fill: { color: '#ffffff', alpha: 1 }, stroke: { color: '#4a1850', width: 5, join: 'round' }, });
     this.tempMessage = `Snake movement:
 - gamepad direction stick, keyb. (WASD/dir keys)
 - touch screen to enable on-screen controls
@@ -425,9 +482,18 @@ Bonuses you don't pick up could turn into obstacles.
 
         if (!this.game.snake.alive) {
           this.currentGameState = GameState.PostGameGameOver;
-          if (this.gameOverText != undefined) {
-            this.uiRenderGroup.addChild(this.gameOverText);
-            if (this.goBackToMenuButton) this.uiRenderGroup.addChild(this.goBackToMenuButton);
+          if (this.gameOverText) this.uiRenderGroup.addChild(this.gameOverText);
+          if (this.goBackToMenuButton) this.uiRenderGroup.addChild(this.goBackToMenuButton);
+
+          let latestScore = this.game.snake.score;
+          // If the last entry in the highscores is less than the latest score, add it
+          let highscores = this.highscores.get();
+          if (highscores.length < 5 || (highscores.length > 0 && highscores[highscores.length - 1].score < latestScore)) {
+            this.currentGameState = GameState.PostGameEnterHighscore;
+            if (this.newHighscoreNameInput) {
+              this.uiRenderGroup.addChild(this.newHighscoreNameInput);
+              this.needToAddHighscore = true;
+            }
           }
         }
       }
@@ -480,7 +546,7 @@ Bonuses you don't pick up could turn into obstacles.
         if (event.code === 'Enter') {
           this.startGame();
         }
-      } else if (this.currentGameState === GameState.PostGameGameOver) {
+      } else if (this.currentGameState === GameState.PostGameGameOver || this.currentGameState === GameState.PostGameEnterHighscore) {
         if (event.code === 'Enter') {
           this.goToMenuFromPostGame();
         }
@@ -542,6 +608,17 @@ Bonuses you don't pick up could turn into obstacles.
   }
 
   private goToMenuFromPostGame() {
+    if (this.needToAddHighscore) {
+      let latestScore = this.game.snake.score;
+      let highscores = this.highscores.get();
+      if (highscores.length < 5 || (highscores.length > 0 && highscores[highscores.length - 1].score < latestScore)) {
+        let newScore = new Score(latestScore, this.playerName);
+        this.highscores.add(newScore);
+      }
+      this.needToAddHighscore = false;
+    }
+
+    this.cleanupHighscores();
     this.cleanupGame();
     this.showMenu();
     this.currentGameState = GameState.InMenu;
@@ -552,6 +629,7 @@ Bonuses you don't pick up could turn into obstacles.
     if (this.startGameButton) this.uiRenderGroup.removeChild(this.startGameButton);
     if (this.gameTitleText) this.uiRenderGroup.removeChild(this.gameTitleText);
     if (this.gameSubtitleText) this.uiRenderGroup.removeChild(this.gameSubtitleText);
+    if (this.viewHighscoresButton) this.uiRenderGroup.removeChild(this.viewHighscoresButton);
   }
 
   private showMenu() {
@@ -560,6 +638,25 @@ Bonuses you don't pick up could turn into obstacles.
     if (this.goBackToMenuButton) this.uiRenderGroup.removeChild(this.goBackToMenuButton);
     if (this.gameTitleText) this.uiRenderGroup.addChild(this.gameTitleText);
     if (this.gameSubtitleText) this.uiRenderGroup.addChild(this.gameSubtitleText);
+    if (this.viewHighscoresButton) this.uiRenderGroup.addChild(this.viewHighscoresButton);
+  }
+
+  private showHighscores() {
+    this.currentGameState = GameState.ViewHighscores;
+    let highscores = this.highscores.get();
+    let highscoresText = 'Highscores:\n';
+    highscores.forEach((score, index) => {
+      highscoresText += `${index + 1}. ${score.name}: ${score.score}\n`;
+    });
+
+    if (this.highscoresText) {
+      this.highscoresText.text = highscoresText;
+    }
+
+    if (this.goBackToMenuButton) this.uiRenderGroup.addChild(this.goBackToMenuButton);
+    if (this.highscoresText) this.uiRenderGroup.addChild(this.highscoresText);
+
+    this.cleanupMenu();
   }
 
   private cleanupGame() {
@@ -597,6 +694,11 @@ Bonuses you don't pick up could turn into obstacles.
 
     if (this.gameScoreText) this.uiRenderGroup.removeChild(this.gameScoreText);
     if (this.snakeSpeedText) this.uiRenderGroup.removeChild(this.snakeSpeedText);
+  }
+
+  private cleanupHighscores() {
+    if (this.highscoresText) this.uiRenderGroup.removeChild(this.highscoresText);
+    if (this.newHighscoreNameInput) this.uiRenderGroup.removeChild(this.newHighscoreNameInput);
   }
 
   private updateSnakeSprites(snake: Snake): Sprite[] {
