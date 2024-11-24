@@ -1,0 +1,79 @@
+{
+  "frames": {
+      "snake1_head_up.png":
+      {
+          "frame": {"x":1,"y":1,"w":32,"h":32}
+      },
+      "snake1_head_left.png":
+      {
+          "frame": {"x":35,"y":1,"w":32,"h":32}
+      },
+      "snake1_head_down.png":
+      {
+          "frame": {"x":69,"y":1,"w":32,"h":32}
+      },
+      "snake1_head_right.png":
+      {
+          "frame": {"x":103,"y":1,"w":32,"h":32}
+      },
+      "snake1_body_straight_up.png":
+      {
+          "frame": {"x":1,"y":35,"w":32,"h":32}
+      },
+      "snake1_body_straight_left.png":
+      {
+          "frame": {"x":35,"y":35,"w":32,"h":32}
+      },
+      "snake1_body_straight_down.png":
+      {
+          "frame": {"x":69,"y":35,"w":32,"h":32}
+      },
+      "snake1_body_straight_right.png":
+      {
+          "frame": {"x":103,"y":35,"w":32,"h":32}
+      },
+      "snake1_body_curve_up_left.png":
+      {
+          "frame": {"x":1,"y":69,"w":32,"h":32}
+      },
+      "snake1_body_curve_up_right.png":
+      {
+          "frame": {"x":35,"y":69,"w":32,"h":32}
+      },
+      "snake1_body_curve_down_left.png":
+      {
+          "frame": {"x":69,"y":69,"w":32,"h":32}
+      },
+      "snake1_body_curve_down_right.png":
+      {
+          "frame": {"x":103,"y":69,"w":32,"h":32}
+      },
+      "snake1_tail_up.png":
+      {
+          "frame": {"x":1,"y":103,"w":32,"h":32}
+      },
+      "snake1_tail_left.png":
+      {
+          "frame": {"x":35,"y":103,"w":32,"h":32}
+      },
+      "snake1_tail_down.png":
+      {
+          "frame": {"x":69,"y":103,"w":32,"h":32}
+      },
+      "snake1_tail_right.png":
+      {
+          "frame": {"x":103,"y":103,"w":32,"h":32}
+      }
+  },
+
+  "animations": {
+      
+  },
+
+  "meta": {
+      "image": "snakesspritesheet3.png",
+      "format": "RGBA8888",
+      "size": {"w":136,"h":136},
+      "scale": "1.0"
+  }
+}
