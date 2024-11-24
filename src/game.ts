@@ -23,9 +23,9 @@ export class Game {
   private MIN_CRITTERS = 0;
   private MAX_CRITTERS = 2;
 
-  private BONUS_CHANCE_TO_SPAWN = 0.2; // 20% chance to spawn a bonus per second
+  private BONUS_CHANCE_TO_SPAWN = 0.21; // 20% chance to spawn a bonus per second
   private CRITTER_CHANCE_TO_CHANGE_DIR = 0.2;
-  private CRITTER_CHANCE_TO_SPAWN = 0.15;
+  private CRITTER_CHANCE_TO_SPAWN = 0.14;
   private SNAKE_SPEED_INCREASE_PER_SECOND = 0.8;
 
   private solidBorders = false;

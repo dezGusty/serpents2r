@@ -285,7 +285,7 @@ export class SerpentsApp {
   }
 
   public async loadAssets() {
-    this.terrainSheet = new Maybe(await Assets.load('terrainspritesheet.json'));
+    this.terrainSheet = new Maybe(await Assets.load('terrainspritesheet2.json'));
     if (!this.terrainSheet.hasData()) {
       console.error('Failed to load the terrain spritesheet');
     }
