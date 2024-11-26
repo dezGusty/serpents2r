@@ -297,7 +297,7 @@ export class SerpentsApp {
       this.terrainTextureNames.push(key);
     }
 
-    this.snakeSheet = new Maybe(await Assets.load('snakesspritesheet.json'));
+    this.snakeSheet = new Maybe(await Assets.load('snakesspritesheet3.json'));
     if (!this.snakeSheet.hasData()) {
       console.error('Failed to load the snake spritesheet');
     }
@@ -363,8 +363,8 @@ export class SerpentsApp {
     this.gameTitleText.position = { x: 260, y: 10 };
     this.uiRenderGroup.addChild(this.gameTitleText);
 
-    this.gameSubtitleText = new BitmapText({ text: `v. ${this.version}, by Gusty`, style: { ...this.DEFAULT_FONT_STYLE, fontSize: 24 } });
-    this.gameSubtitleText.position = { x: 530, y: 60 };
+    this.gameSubtitleText = new BitmapText({ text: `v. ${this.version}, by dezGusty`, style: { ...this.DEFAULT_FONT_STYLE, fontSize: 24 } });
+    this.gameSubtitleText.position = { x: 490, y: 60 };
     this.uiRenderGroup.addChild(this.gameSubtitleText);
 
     this.highscoresText = new BitmapText({ text: 'Highscores:', style: { ...this.DEFAULT_FONT_STYLE, fontSize: 24 } });
@@ -414,6 +414,8 @@ Bonuses you don't pick up could turn into obstacles.
     await sound.add('spawn-critter', 'audio/bong_001.ogg');
     await sound.add('bonus-becomes-obstacle', 'audio/switch_007.ogg');
 
+    await sound.add('music-track-1', 'audio/track_01_suno_DNM.ogg');
+
     console.log('Loaded sounds...');
 
   }
@@ -433,6 +435,9 @@ Bonuses you don't pick up could turn into obstacles.
         this.terrainRenderGroup.addChild(gameSprite);
       }
     }
+
+    // always play music
+    sound.play('music-track-1', { loop: true, volume: 0.4 });
 
     this.game.onSnakeCollisionWithItself = () => {
       sound.play('snake-dead');
