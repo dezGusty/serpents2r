@@ -1,55 +1,37 @@
-# serpents2r
+# serpents2r 🐍
 
-Serpents 2 Remastered
+![serpents2r screenshot](./doc/s2r_scr01.jpg)
 
-for firebase hosting `vite.config.ts` should contain:
+Serpents 2 Respawned - a snake like game. A remaster of a very old similar game.
 
-```ts
-import { defineConfig } from 'vite';
+## Play online ⚽
 
-export default defineConfig({
-  build: {
-    target: 'esnext' //browsers can handle the latest ES features
-  }
-})
-```
+Play the github pages build <https://dezgusty.github.io/serpents2r/>
 
-for github pages hosting `vite.config.ts` should contain:
+## About the game
 
-```ts
-import { defineConfig } from 'vite';
+The game is written in Typescript using `pixi.js`, `Vite`.
 
-export default defineConfig({
-  base: '/serpents2r/',
-  build: {
-    target: 'esnext' //browsers can handle the latest ES features
-  }
-})
-```
+Start the game and try to obtain as many points as possible.
 
-## Building for gh-pages
+Input control:
 
-## Building and deploying for firebase
+- ⌨️ Keyboard: Directional Keys (or WASD) for directions, SPACE for paus
+- 🎮 Gamepad: Directional stick for directions
+- 📱 Touchscreen devices: On-screen controls appear after touch
 
-Ideally, there should be some configuring that allows passing a single different argument, but the solution for that failed to materialize after spending the allocated time to identify it.
-Yes, I tried passing the mode argument to vite, different config files, but nothing worked
+Resources:
 
-```sh
-npm run build -- -c ./vite.config.firebase.ts
-npm run build -- --mode firebase --base .
-```
+- Game art (2D)
+  - some created by me
+  - some used from  [Kenney](https://kenney.nl/)
+  - mouse sprite generated using gen-ai (<https://creator.nightcafe.studio/>)
+- Sounds
+  - some created by me
+  - some used from  [Kenney](https://kenney.nl/)
+- Music
+  - AI generated via [Suno](https://suno.com/)
 
-Therefore, the current solution is the following:
+## For developers
 
-When building for the github release (which will be the default, as it's built by the CI pipeline), replace the contents of the `.env` file with those of `.env.gh.local`.
-When building for the firebase release, replace the contents of the `.env` file with those of `env.firebase.local`
-
-The `.env` file is used as input in `vite.config.ts`.
-
-```sh
-cp .env.firebase.local .env
-npm run build
-cp .env.gh.local .env
-npm run preview
-firebase deploy
-```
+For details on building, see also [doc/building.md](./doc/building.md).
