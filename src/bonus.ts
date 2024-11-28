@@ -7,7 +7,6 @@ export class Bonus {
 
   type: number = 0;
   static readonly WARNING_DURATION = 3000;
-  static readonly CHANCE_TO_TRANSFORM_TO_OBSTACLE = 0.25;
   public picked: boolean = false;
   private startingLifetime: number = 0;
   public initialDuration(): number { return this.startingLifetime; }

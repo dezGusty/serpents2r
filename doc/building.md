@@ -1,5 +1,20 @@
 # Building
 
+## Prerequisites
+
+You will need Node.js, version 20 or newer.
+
+## Clone and run
+
+You should be able to run the game locally by cloning the repository, opening a terminal in the cloned directory and then running
+
+```sh
+npm i
+npm run dev
+```
+
+## Playing around with the CI pipeline
+
 for firebase hosting `vite.config.ts` should contain:
 
 ```ts

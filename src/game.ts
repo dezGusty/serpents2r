@@ -24,6 +24,8 @@ export class Game {
   private MAX_CRITTERS = 2;
 
   private BONUS_CHANCE_TO_SPAWN = 0.21; // 20% chance to spawn a bonus per second
+  private BONUS_CHANCE_TO_TRANSFORM_TO_OBSTACLE = 0.58;
+
   private CRITTER_CHANCE_TO_CHANGE_DIR = 0.2;
   private CRITTER_CHANCE_TO_SPAWN = 0.14;
   private SNAKE_SPEED_INCREASE_PER_SECOND = 0.8;
@@ -335,9 +337,11 @@ export class Game {
     for (let i = 0; i < this.bonuses.length; i++) {
       if (this.bonuses[i].remainingLifetime <= 0) {
         // some chance (e.g. 20%) to spawn an obstacle
-        if (Math.random() < Bonus.CHANCE_TO_TRANSFORM_TO_OBSTACLE) {
+        if (Math.random() < this.BONUS_CHANCE_TO_TRANSFORM_TO_OBSTACLE) {
           this.onBonusToObstacle(this.bonuses[i]);
-          this.obstacles.push(new Obstacle(this.bonuses[i].x, this.bonuses[i].y, 1));
+          // set a random obstacle type between 0 and 3
+          let obstacleType = Math.floor(Math.random() * 4);
+          this.obstacles.push(new Obstacle(this.bonuses[i].x, this.bonuses[i].y, obstacleType));
         }
         somethingChanged = true;
       }
